@@ -14,21 +14,27 @@ Written to `.claude/memory/tasks/task-[id]/DONE-REPORT.md` when a task closes.
 ## Task Summary
 - Goal: [one-line goal from CONTEXT.md]
 - Outcome: done | failed
-- Completed: YYYY-MM-DD HH:MM
+- Completed: YYYY-MM-DD HH:MM UTC
 
 ## Acceptance Criteria Outcome
 - [ ] [criterion 1] — pass | fail | partial
 - [ ] [criterion 2] — pass | fail | partial
 
 ## Logical Step Recap
-| Step | Agent | Status | Notes |
-|------|-------|--------|-------|
-| 1 | @agent-name | done | [summary from PROGRESS.md] |
-| 2 | @agent-name | done | [summary from PROGRESS.md] |
+| Step | Phase | Agent | Status | Notes |
+|------|-------|-------|--------|-------|
+| 1 | [phase or —] | @agent-name | done | [summary from PROGRESS.md] |
+| 2 | [phase or —] | @agent-name | done | [summary from PROGRESS.md] |
 
 ## Deliverables Changed
 - `path/to/file.ext` — [what changed and why]
 - `path/to/another.ext` — [what changed and why]
+
+## Tracker And Reality
+- Trackers checked: [project progress.md, README status table, …] | none touched
+- Drift found: none | [what disagreed with the disk]
+- Resolution: tracker synced before closing | drift recorded here as
+  not done / done but untracked / never in plan
 
 ## Wrong Assumptions (Mandatory)
 | Assumption | Why It Was Wrong | Correction Applied |
@@ -52,3 +58,5 @@ Written to `.claude/memory/tasks/task-[id]/DONE-REPORT.md` when a task closes.
   2. [step]
   3. [step]
 ```
+
+**On Tracker And Reality**: the three drift labels are the ones defined in `.claude/skills/task-lifecycle/SKILL.md` under Three Kinds Of Not Done. Use them as written — they carry different fixes, and collapsing them into "not started" loses the only information that says which fix applies.

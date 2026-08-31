@@ -83,17 +83,18 @@ The hook wiring already sits in the portable `settings.json` via `${CLAUDE_PROJE
 
 ```
 .claude/memory/                     # Seeded from memory.zip on first run
-  ├── state/                        # Canonical task state
+  ├── state/                        # Canonical task state — a closed directory
   │   ├── ACTIVE-TASK.md
   │   ├── EVENT-LOG.md
   │   └── DONE-LOG.md
-  ├── tasks/                        # One folder per task
-  ├── agent-documents/              # Crew scratch space
+  ├── tasks/                        # One folder per task, named task-YYYYMMDD-NN
+  ├── agent-documents/              # Crew scratch space, archived at each new task
+  │   └── README.md
   ├── improvements/                 # What the crew learned
   │   ├── IMPROVEMENTS.md
   │   ├── PATTERNS.md
   │   └── agent-notes/
-  └── reference/                    # Project conventions, seeded empty
+  └── reference/                    # Binding conventions, seeded empty
       └── CONVENTIONS.md
 .claude/about/                      # Operator profile — optional, made by /about-setup
   ├── profile/PROFILE.md
@@ -171,7 +172,7 @@ The hook wiring already sits in the portable `settings.json` via `${CLAUDE_PROJE
    You want to see:
    - `CLAUDE.md` imports resolving with no errors in the system prompt
    - A `step-sync` row appearing in `.claude/memory/state/EVENT-LOG.md` after an edit — that's the hooks firing
-   - `ACTIVE-TASK.md`, `EVENT-LOG.md`, and a task folder all initialized
+   - `ACTIVE-TASK.md`, `EVENT-LOG.md`, and a `task-YYYYMMDD-NN` folder all initialized
 
 ## Keeping It Out Of Git
 

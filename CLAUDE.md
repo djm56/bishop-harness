@@ -47,11 +47,25 @@ Run `/about-setup` to create or refresh the profile.
 
 Durable state lives on disk in [.claude/memory/](.claude/memory/) — task files, state files, improvements, and the crew's working documents. The folder structure is seeded from `.claude/memory.zip`; if `.claude/memory/` ever goes missing, extract the zip to rebuild it before starting any work. All state-sync rules come from [.claude/skills/task-lifecycle/SKILL.md](.claude/skills/task-lifecycle/SKILL.md).
 
-## Project Conventions
+What lives where, and why it matters that they don't mix:
 
-Human-ratified coding conventions live in [.claude/memory/reference/CONVENTIONS.md](.claude/memory/reference/CONVENTIONS.md). That file is **binding**, and it deliberately sits **outside** the self-improvement loop.
+- `memory/state/` — the live pointer (`ACTIVE-TASK.md`), the audit journal (`EVENT-LOG.md`), and the finished-task index (`DONE-LOG.md`). A **closed directory**: those three files plus machine-written state from a registered hook, and nothing else.
+- `memory/tasks/task-[id]/` — one folder per task, holding `CONTEXT.md`, `PROGRESS.md`, and at the end `DONE-REPORT.md`. Task IDs are `task-YYYYMMDD-NN` — UTC date, then a counter that resets daily.
+- `memory/agent-documents/` — scratch while a task is live. Archived, never deleted, when a new task starts.
+- `memory/improvements/` and `memory/reference/` — what the system has learned, and what a human has ratified from it. See below.
 
-- **Read it first.** Every developer and reviewer reads the entries whose `Scope` covers the files they're touching — before writing or reviewing — and complies.
-- **Humans write it, agents don't.** No agent edits `CONVENTIONS.md`. Spotted a candidate convention? Propose it through [.claude/memory/improvements/IMPROVEMENTS.md](.claude/memory/improvements/IMPROVEMENTS.md) as `proposed`, and a human ratifies it across.
-- **Who wins.** On any conflict, `CONVENTIONS.md` (ratified, binding) beats `PATTERNS.md` (observed, advisory).
-- **Where it comes from.** Seeded empty from `.claude/memory.zip`; the format scaffold is `.claude/templates/reference/CONVENTIONS-TEMPLATE.md`.
+Doctrine never lives inside `memory/`. How the system works belongs in agents, skills, and templates; a rule written into the scratch folder is archived at the next task init and goes quiet.
+
+## Improvements, Conventions, And Patterns
+
+Three files hold what this system has learned. They are not interchangeable.
+
+- **[IMPROVEMENTS.md](.claude/memory/improvements/IMPROVEMENTS.md) — the findings ledger.** Specific, observed findings, one entry per observation. May cite code, paths, and symbols. Written by agents during work; append-only. `Status` belongs to the human — agents never set or change it.
+- **[CONVENTIONS.md](.claude/memory/reference/CONVENTIONS.md) — binding rules.** Generalised, project-agnostic practices that close a gap in an agent or a skill. An entry exists to prevent a **class** of problem, never the single instance that prompted it. **Human-ratified only:** agents never edit this file, and every developer and reviewer reads the entries their change triggers BEFORE writing or reviewing, and complies. It sits deliberately outside the self-improvement loop. Format scaffold: [.claude/templates/reference/CONVENTIONS-TEMPLATE.md](.claude/templates/reference/CONVENTIONS-TEMPLATE.md).
+- **[PATTERNS.md](.claude/memory/improvements/PATTERNS.md) — advisory patterns.** Agent-observed reusable solutions and worked examples. Non-binding; `CONVENTIONS.md` wins on any conflict.
+
+**How one feeds the next.** An agent logs a specific finding in `IMPROVEMENTS.md`. If it generalises, a human ratifies a broader rule into `CONVENTIONS.md` — one that would have prevented that finding **and others like it** — and the originating entry is marked applied. Most findings don't generalise: one-offs stay in the ledger, and some are better fixed by editing the agent or skill directly.
+
+**Recurrence is a diagnostic.** A finding logged three or more times points at a hole in an agent or skill definition, not a missing convention. Fix the definition rather than logging it a fourth time — and that fix is a **proposal, not an edit**: definitions are human-ratified too. An agent that spots one records the proposal and surfaces it to the operator instead of amending the definition mid-task.
+
+Both `CONVENTIONS.md` and the improvement files are seeded empty from `.claude/memory.zip`.

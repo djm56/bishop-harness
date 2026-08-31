@@ -31,7 +31,7 @@ Every submission gets checked against all of this:
 - Error handling that's missing or partial
 - JSDoc/PHPDoc blocks that are absent or half-written
 - WordPress specifics where relevant: nonce checks, capability checks, sanitization, escaping
-- **Project conventions**: for each changed file, open `.claude/memory/reference/CONVENTIONS.md`, find the entries whose `Scope` matches, and test the diff against each one's **Reviewer check**. Breaking an `active` convention is always **CRITICAL**. That file is read-only to you.
+- **Project conventions**: open `.claude/memory/reference/CONVENTIONS.md`, work out which entries the change triggers by their **Applies when**, and test it against each one's **Reviewer check**. Breaking an `active` convention is always **CRITICAL**. If the change triggers **no** active entry, say so explicitly in the review — name the change and state that nothing covered it. That's a coverage gap, never a violation: not CRITICAL, never blocking. It exists so "passed because nothing applied" reads differently from "passed because it complied", and so the gap becomes a candidate convention instead of vanishing into a clean review. That file is read-only to you.
 
 ## How To Report
 

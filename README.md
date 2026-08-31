@@ -155,23 +155,31 @@ unzip -o memory.zip
 | Folder | What it's for | How long it lasts | Contents |
 |--------|---------------|-------------------|----------|
 | `.claude/memory/state/` | The canonical state used to resume exactly where work stopped | Permanent | `ACTIVE-TASK.md`, `EVENT-LOG.md`, `DONE-LOG.md` |
-| `.claude/memory/tasks/` | One folder per task | Permanent, though Bishop prunes stale ones | `task-[id]/CONTEXT.md`, `PROGRESS.md`, `DONE-REPORT.md` |
-| `.claude/memory/agent-documents/` | Scratch space the crew uses mid-task | Temporary — survives across sessions while a task is unfinished, cleared when a new one starts | drafts, review notes, working docs |
+| `.claude/memory/tasks/` | One folder per task, named `task-YYYYMMDD-NN` | Permanent, though Bishop prunes stale ones | `task-[id]/CONTEXT.md`, `PROGRESS.md`, `DONE-REPORT.md` |
+| `.claude/memory/agent-documents/` | Scratch space the crew uses mid-task | Temporary — survives across sessions while a task is unfinished, archived when a new one starts | drafts, review notes, `improvement-scratch.md` |
 | `.claude/memory/improvements/` | What the crew learned, and patterns worth reusing | Permanent | `IMPROVEMENTS.md`, `PATTERNS.md`, `agent-notes/` |
-| `.claude/memory/reference/` | Binding coding conventions, ratified by a human | Permanent | `CONVENTIONS.md` |
+| `.claude/memory/reference/` | Binding conventions, ratified by a human | Permanent | `CONVENTIONS.md` |
+
+`state/` is a **closed directory**: those three canonical files plus machine-written state from a registered hook, and nothing else. Checkpoints, handoff notes, and drafts belong in `agent-documents/`.
 
 ### The three state files
 
-- `ACTIVE-TASK.md` — the single answer to "what's happening right now": task id, status (`not-started` / `in-progress` / `blocked` / `complete`), next action, blockers.
-- `EVENT-LOG.md` — an append-only journal, one row per sync. This is the record that matters for continuity.
+- `ACTIVE-TASK.md` — the single answer to "what's happening right now": task id, status (`not-started` / `in-progress` / `blocked` / `complete`), next action, blockers. Each sync rewrites what has stopped being true rather than carrying it forward.
+- `EVENT-LOG.md` — an append-only journal, one row per sync. This is the record that matters for continuity. Timestamps are `YYYY-MM-DD HH:MM UTC`, never invented, and every appended row is read back and verified before the sync is reported done.
 - `DONE-LOG.md` — append-only history of finished work: `Task ID | Completed | Outcome | Summary`.
+
+### Task IDs
+
+Every task gets `task-YYYYMMDD-NN` — the UTC creation date, then a counter that resets each day and starts at `01`. So `task-20260711-01`, then `task-20260711-02`, then `task-20260712-01` the next day.
+
+Bishop derives it before anything is delegated, taking the highest `NN` already used for that date across **both** the existing `tasks/task-<date>-*` folders and the rows mentioning them in `EVENT-LOG.md` and `DONE-LOG.md`. Folders get pruned; the logs don't — checking both is what stops a retired ID coming back around and making the audit trail ambiguous.
 
 ### Inside a task folder
 
 Every `.claude/memory/tasks/task-[id]/` holds:
 
-- `CONTEXT.md` — the goal, the acceptance criteria, the relevant files, and any notes.
-- `PROGRESS.md` — step by step status per agent: `pending` → `in-progress` → `done` / `failed`.
+- `CONTEXT.md` — the goal, the acceptance criteria, the relevant files, and any notes. Every path in `Key Files` is confirmed as it's written, or marked `— to be created at step N`.
+- `PROGRESS.md` — step by step status per agent, in a `Step | Phase | Agent | Status | Notes` table: `pending` → `in-progress` → `done` / `failed`. A step becomes `in-progress` when its brief is delegated, not afterwards.
 - `DONE-REPORT.md` — written at the end: what shipped, what was assumed wrongly, what the crew got wrong and how it was corrected.
 
 ### Finding your way around mid-task
@@ -185,8 +193,8 @@ cat .claude/memory/state/EVENT-LOG.md
 
 # The active task itself
 ls .claude/memory/tasks
-cat .claude/memory/tasks/task-007/CONTEXT.md
-cat .claude/memory/tasks/task-007/PROGRESS.md
+cat .claude/memory/tasks/task-20260711-01/CONTEXT.md
+cat .claude/memory/tasks/task-20260711-01/PROGRESS.md
 
 # If it's in-progress or blocked, look at the scratch space before anything else
 ls .claude/memory/agent-documents
@@ -204,7 +212,7 @@ cat .claude/memory/state/DONE-LOG.md
 ### What sticks around
 
 - `state/` and `tasks/` are the durable trail. That's the audit record.
-- `agent-documents/` is scratch by design, but it survives across sessions while a task is unfinished.
+- `agent-documents/` is scratch by design, but it survives across sessions while a task is unfinished — and when a new task starts it is **archived into `archive-task-[id]/`, never deleted**. A scratch file is sometimes the only copy of a deliverable that never shipped.
 - `improvements/` is long-term. Don't treat it as somewhere to dump notes.
 
 ### Project conventions
@@ -220,7 +228,7 @@ cat .claude/memory/state/DONE-LOG.md
 Where two disagree, `CONVENTIONS.md` wins.
 
 - **Adding a rule** is a human job. Copy the entry template from [`.claude/templates/reference/CONVENTIONS-TEMPLATE.md`](.claude/templates/reference/CONVENTIONS-TEMPLATE.md), fill in every field, take the next `CONV-NNN`, add an index row, set `Status: active`.
-- **Agents read it and comply.** Developers read every entry whose `Scope` covers a file they're touching, before writing anything. The reviewer checks each changed file against that entry's `Reviewer check` — breaking an `active` rule is always a CRITICAL finding.
+- **Agents read it and comply.** Developers read every entry whose **Applies when** trigger their change satisfies — a property of the change, readable off the brief or the diff, not a path — before writing anything. The reviewer tests the change against each triggered entry's `Reviewer check`; breaking an `active` rule is always a CRITICAL finding. Where a change triggers no entry at all, the reviewer says so explicitly: that's a coverage gap worth a proposal, not a violation.
 - **Agents never edit it.** A missing or wrong convention gets proposed through `IMPROVEMENTS.md` as `proposed`, and a human ratifies it across. That's the only route in.
 - **Retire, don't delete.** Withdrawing a rule means setting `Status: deprecated`. The `CONV-NNN` ids are permanent and never reused.
 

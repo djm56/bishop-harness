@@ -4,7 +4,11 @@ The reference for appending to the files in `.claude/memory/improvements/`.
 
 **Append-only.** Existing entries are never modified, reordered, or deleted. New entries go on the end.
 
-**Status.** Every new entry starts at `Status: proposed`. Only the human operator moves it along (`proposed → approved → applied → rejected`). No agent — doc-writer included — ever changes the status on an existing entry.
+**Where the end is.** Every file in `improvements/` carries the marker `<!-- Append new entries below this line -->` just under its header. The marker is written when the file is created and **never moved**. Every new entry goes **below it and below everything already there** — at the very bottom of the file. So the file reads oldest-first, growing downward, and nothing above the insertion point is ever touched.
+
+Read the file before you write to it, find the last existing entry, and append after that. Never insert between entries, never rewrite the header or the marker, and never remove content to make room.
+
+**Status.** Every new entry starts at `Status: proposed`. Only the human operator moves it along — `proposed → approved → applied`, with `rejected`, `retired`, and `superseded` as terminal branches. No agent, doc-writer included, ever changes the status on an existing entry, and no agent fills in `Approver` or `Date approved`.
 
 ---
 
@@ -12,7 +16,7 @@ The reference for appending to the files in `.claude/memory/improvements/`.
 
 File: `.claude/memory/improvements/IMPROVEMENTS.md`
 
-Append below the `<!-- Append new entries below this line -->` marker.
+This is the **findings ledger**: specific, observed findings, one entry per observation. It may cite code, paths, and symbols — that's what makes a finding checkable later.
 
 ```
 ### [YYYY-MM-DD] — [Agent/Skill/Tool Target]
@@ -23,21 +27,23 @@ Append below the `<!-- Append new entries below this line -->` marker.
 **Date approved**: —
 ```
 
+Appended at the bottom of the file, below the marker and below every existing entry.
+
 **Rules:**
 
 - The target is a named agent (`@jnr-developer`), a skill (`task-lifecycle`), or a tool concept. Not a vague area.
 - The suggestion has to be implementable without anyone coming back to ask what it means.
 - Status is `proposed` on creation. Never anything else.
 - **Approver** and **Date approved** belong to the human. No agent fills them in — they're recorded when a human moves status to `approved`.
+- An entry may pick up amendment lines after `**Date approved**` — things like `**Disposition (task-…):**` or `**Fold-forward (…):**`. So an entry ends at the next `### [` heading or at the end of the file, not at a fixed final field. Don't assume the last field you recognise is the end of the entry — and when appending, find the true bottom of the file rather than the first field you take for a terminator.
 - This file is for agent, skill, and tool behaviour. Code patterns go in PATTERNS.md.
+- When a finding turns out to generalise, a human ratifies the broader rule into `.claude/memory/reference/CONVENTIONS.md` and marks the originating entry `applied`. Most findings don't generalise — one-offs stay in the ledger, and some are better fixed by editing the agent or skill directly.
 
 ---
 
 ## PATTERNS.md
 
 File: `.claude/memory/improvements/PATTERNS.md`
-
-Append below the `<!-- Append new entries below this line -->` marker.
 
 ```
 ### [Pattern Name]
@@ -47,11 +53,13 @@ Append below the `<!-- Append new entries below this line -->` marker.
 **Discovered**: [YYYY-MM-DD, task-id]
 ```
 
+Appended at the bottom of the file, below the marker and below every existing entry.
+
 **Rules:**
 
 - Give it a short, descriptive name — something like `Bootstrap 4.3 SCSS Module Pattern`.
 - Context is a concrete trigger, not a broad category.
-- This file is for reusable code conventions, architecture decisions, and technical solutions.
+- This file is for reusable solutions, architecture decisions, and technical approaches. Advisory and non-binding — `.claude/memory/reference/CONVENTIONS.md` wins on any conflict.
 - Agent and skill behaviour goes in IMPROVEMENTS.md, not here.
 
 ---
@@ -60,7 +68,7 @@ Append below the `<!-- Append new entries below this line -->` marker.
 
 File: `.claude/memory/improvements/agent-notes/[agent-name].md`
 
-Create it if it isn't there yet, using the header below.
+Create it if it isn't there yet, using the header below. The marker goes in at creation, sits under the header, and never moves — entries accumulate below it.
 
 **Header for a new file — only when creating it, never repeated in an existing one:**
 
@@ -73,7 +81,7 @@ Append only. Never modify existing entries.
 <!-- Append new entries below this line -->
 ```
 
-**Entry format** — append after the last entry, or after the marker:
+**Entry format** — appended at the bottom of the file, below the marker and below every existing entry:
 
 ```
 ### [YYYY-MM-DD] — [Observation Title]
@@ -87,3 +95,5 @@ Append only. Never modify existing entries.
 - `Source` is either `self-reported` (the agent wrote it about itself) or `bishop-observed` (Bishop added it from watching the delegation land).
 - Write only when something is genuinely worth noting. No "no issues" or "performed as expected" entries — they're noise.
 - The adjustment has to be specific enough to act on. "Add X to the pre-flight checklist in the agent file", not "be more careful".
+- The marker stays where it is. A new note never displaces it, and never displaces an older note.
+- A note is a record, not a licence to edit the agent. Agent and skill files are human-ratified: an agent that spots a hole in a definition records the proposal and surfaces it, and does not amend the definition mid-task.

@@ -72,18 +72,56 @@ The most important thing on this page. It governs how you run EVERY step. Breaki
 
 ```
 A. HAND the step to the named sub-agent.
-   - Put this in the brief: "When done, end your output with:
+   - Set the step's Status to `in-progress` in PROGRESS.md as part of handing it out.
+     A step is in-progress the moment its brief leaves your hands; the sync that
+     follows is what marks it done. A row written after the fact is a record
+     repaired, not a record kept.
+   - Put this in the brief: "When done, end your output with two lines:
+     IMPROVEMENT-NOTE: none | <one concrete, actionable observation>
      STEP [N] COMPLETE — state-sync required before next step."
 
 B. READ what comes back. Satisfy yourself the step is actually done.
+   - Non-`none` IMPROVEMENT-NOTE? Append it — step, agent, note — to
+     `.claude/memory/agent-documents/improvement-scratch.md` before moving on.
+     That file is what the learning pass consolidates at the end; collecting as
+     you go is what stops the pass becoming a memory exercise.
+   - A process observation that would change the NEXT brief goes into that brief
+     now, not into a queue for the closing pass. A bundled acceptance criterion
+     that should have been two questions, a question phrased so it can't fail —
+     rewrite the next brief and say in it that you did. It still gets appended to
+     the scratch file; the two aren't alternatives. The closing pass can't change
+     an outcome. The next brief can.
+   - A returned review is a checklist, not a gate. Sort each finding by whether it
+     changes the bytes to be written: those that do go into the next write brief,
+     those that don't get recorded as notes, and the work continues. A NO-GO or a
+     CRITICAL list is not on its own authority to spawn another analysis round.
 
 C. HAND state-sync to @doc-writer immediately.
+   - IMMEDIATELY means in the SAME TURN as the step report that triggered it.
+     A sync announced in a closing sentence and left for the next turn is a
+     skipped sync, and the clause below applies to it exactly as it applies to
+     no sync at all. The turn ends once the sync is delegated, not once it is
+     promised. Stating an action at the end of a turn is not taking it.
    - Brief them: "State-sync for step [N]. Update PROGRESS.md (mark step [N] done),
      ACTIVE-TASK.md (update Next Action), and append one EVENT-LOG.md row (event=step-sync).
      Confirm all three sync targets + the step number."
+   - Say in the brief that the sync REWRITES prose that has stopped being true
+     rather than carrying it forward. Any sentence in ACTIVE-TASK.md calling
+     something outstanding, pending, awaiting a decision, or blocked gets
+     re-checked against what the intervening steps did, and rewritten or removed
+     where they closed it. Finishing the work doesn't update the sentence saying
+     it's unfinished, and a stale sentence in a state file reads as authoritative
+     while being wrong.
+   - Where the step being synced was resumed mid-flight from an agent's transcript
+     rather than restarted, that agent opens its resumed output with a state report
+     naming what it had and hadn't written to disk before the interruption. Don't
+     record the step done until that report exists.
 
 D. READ the sync confirmation from @doc-writer.
    - It must name all three targets (PROGRESS.md, ACTIVE-TASK.md, EVENT-LOG.md) and the step number.
+   - It must also report the EVENT-LOG row read back and verified — six cells,
+     leading and trailing pipe, full `YYYY-MM-DD HH:MM UTC` timestamp, not earlier
+     than the row above it.
    - Missing or partial confirmation → mark the task BLOCKED and STOP.
 
 E. ONLY THEN move to step N+1.
@@ -93,24 +131,28 @@ E. ONLY THEN move to step N+1.
 
 **No exceptions**: four steps or a hundred, every one gets its own sync. Nothing batched, nothing deferred, no "I'll write it all up at the end".
 
+**A step the operator injects mid-task is a planned step from the moment you hand it out.** Delegate its PROGRESS.md row to `@doc-writer` BEFORE the work delegation leaves your hands — status `in-progress`, note `(operator-directed, injected HH:MM UTC)` — then run A–E on it unchanged. The loop assumes steps are known before they run; naming the step the moment it becomes known is what keeps that assumption true. Urgency is the reason the row is necessary, not the excuse for skipping it — it costs one delegation. Never hand out injected work against a PROGRESS.md that doesn't yet name it.
+
 ---
 
 ## Standing Up A New Task
 
-Before step 1 runs on a genuinely new task, hand `@doc-writer` the following:
+Before step 1 runs on a genuinely new task, **derive the task ID yourself**: `task-YYYYMMDD-NN`, using today's **UTC** date and the daily-reset counter defined in the Task IDs section of `.claude/skills/task-lifecycle/SKILL.md`. To pick `NN`, scan existing `.claude/memory/tasks/task-<date>-*` folders **and** rows referencing `task-<date>-*` in `EVENT-LOG.md` and `DONE-LOG.md`; take the highest you find and add one, or `01` if there are none. Folders get deleted by cleanup; the logs don't — checking both is what stops an ID coming back around.
 
-1. Empty `.claude/memory/agent-documents/*.md` (keep `.gitkeep`) — but only once you are certain you are not resuming an unfinished task.
-2. Write `.claude/memory/tasks/task-[id]/CONTEXT.md` from the `CONTEXT.md` block in `.claude/templates/task/TASK-TEMPLATE.md`, copied exactly — same headings, same order, same shape.
+Then hand `@doc-writer` the following, passing the derived ID:
+
+1. Clear `.claude/memory/agent-documents/` — but only once you are certain you are not resuming an unfinished task. **Clear means archive**: keep `.gitkeep` and `README.md`, **move** every other `.md` into `.claude/memory/agent-documents/archive-task-[id]/` rather than deleting it (a workspace file is sometimes the only copy of a deliverable that never shipped), then recreate `improvement-scratch.md` with a fresh header. The evidence is the `ls -la` of the directory afterwards, returned with the confirmation. This item needs a shell — check the receiving agent's `tools:` allowlist grants Bash before handing it over, and if it doesn't, give the item to an agent that does and say so in the brief rather than issuing it to a receiver that can't perform it.
+2. Write `.claude/memory/tasks/task-[id]/CONTEXT.md` from the `CONTEXT.md` block in `.claude/templates/task/TASK-TEMPLATE.md`, copied exactly — same headings, same order, same shape. Every path written into `Key Files` is confirmed as it's written, by listing or reading it; a path that doesn't exist yet carries an explicit `— to be created at step N` marker and is never left bare. A wrong path in canonical task state is invisible guidance: later agents take the documented structure as correct and nobody questions it.
 3. Write `.claude/memory/tasks/task-[id]/PROGRESS.md` from the `PROGRESS.md` block in that same template, then fill in a row per planned step:
 
 ```markdown
 # Progress — task-[id]
 
-| Step | Agent | Status | Notes |
-|------|-------|--------|-------|
-| 1 | @agent-name | pending | [brief description] |
-| 2 | @agent-name | pending | [brief description] |
-| ... | ... | pending | ... |
+| Step | Phase | Agent | Status | Notes |
+|------|-------|-------|--------|-------|
+| 1 | [phase or —] | @agent-name | pending | [brief description] |
+| 2 | [phase or —] | @agent-name | pending | [brief description] |
+| ... | ... | ... | pending | ... |
 ```
 
 The template at `.claude/templates/task/TASK-TEMPLATE.md` is the only authority for both files. Do not improvise a layout.
@@ -159,10 +201,22 @@ How you finish EVERY task. Skipping any part of this is as serious as skipping a
 ```
 A. WRITE a closing summary of what changed.
 
-B. RUN THE LEARNING PASS (blocking — you cannot skip it).
-   - Gather improvement reports from every sub-agent that contributed.
-     (They attach findings to their step completion reports when they
-     have something; otherwise they say nothing.)
+B. CHECK THE TRACKERS AGAINST REALITY (blocking).
+   - Diff every canonical tracker the task touched — a project progress
+     file, a README status table, anything claiming what's done — against
+     what is actually on disk.
+   - Drift either way is a blocking discovery: code present with no
+     completed step, or a tracker claiming completion with the code
+     missing. Sync the tracker before closing, or record the drift in
+     DONE-REPORT.md using the three labels from the task-lifecycle skill
+     — not done, done but untracked, never in plan. They carry different
+     fixes; one "not started" label loses which fix applies.
+
+C. RUN THE LEARNING PASS (blocking — you cannot skip it).
+   - Read `.claude/memory/agent-documents/improvement-scratch.md` — the
+     notes you appended as the steps landed. Every step footer carried an
+     IMPROVEMENT-NOTE line; the `none` values weren't recorded. That list
+     IS the input; the pass consolidates it rather than recalling it.
    - Add your own Bishop-level observations — agent behaviour patterns,
      delegation gaps, missing skills.
    - Something concrete to record? Hand the writes to @doc-writer with
@@ -176,26 +230,29 @@ B. RUN THE LEARNING PASS (blocking — you cannot skip it).
    - The status field belongs to the human operator. Never set it,
      never change it.
 
-C. ONLY AFTER B: hand @doc-writer the creation of
+D. ONLY AFTER C: hand @doc-writer the creation of
    `tasks/task-[id]/DONE-REPORT.md`, built from
    `.claude/templates/task/DONE-REPORT-TEMPLATE.md`.
    - Require them to confirm the mandatory sections are present —
-     "Wrong Assumptions" and "Sub-Agent Mistakes and Corrections" included.
+     "Wrong Assumptions" and "Sub-Agent Mistakes and Corrections" included,
+     and "Tracker And Reality" carrying whatever step B found.
    - Hard gate. If the report fails or a section is missing, the task
      does not close.
 
-D. ONLY AFTER C: hand over marking `ACTIVE-TASK.md` complete.
+E. ONLY AFTER D: hand over marking `ACTIVE-TASK.md` complete.
 
-E. ONLY AFTER D: hand over the outcome row appended to `DONE-LOG.md`.
+F. ONLY AFTER E: hand over the outcome row appended to `DONE-LOG.md`.
 ```
 
-**If you break it**: marking `ACTIVE-TASK.md` complete or appending to `DONE-LOG.md` before the learning pass (B) and the `DONE-REPORT.md` (C) means the completion contract is broken and the task is not done. Go back and run both before closing.
+**If you break it**: marking `ACTIVE-TASK.md` complete or appending to `DONE-LOG.md` before the tracker check (B), the learning pass (C), and the `DONE-REPORT.md` (D) means the completion contract is broken and the task is not done. Go back and run all three before closing.
 
 **No exceptions**: every task, long or short, trivial or not. The learning pass always runs. The only thing that varies is whether it ends in file writes or in nothing worth writing.
 
 ## The Audit Journal (EVENT-LOG.md)
 
-Every state-sync delegation adds one row to `.claude/memory/state/EVENT-LOG.md`, the primary audit journal. Schema lives in `.claude/templates/state/STATE-FILE-TEMPLATE.md`. Append a `complete` row when a task closes and a `blocked` row when one blocks.
+Every state-sync delegation adds one row to `.claude/memory/state/EVENT-LOG.md`, the primary audit journal. Schema lives in `.claude/templates/state/STATE-FILE-TEMPLATE.md`. Timestamps are `YYYY-MM-DD HH:MM UTC` and are never invented. Append a `complete` row when a task closes and a `blocked` row when one blocks.
+
+Every appended row is read back and verified before the sync is reported done — six cells, a leading and trailing pipe, a whole timestamp, and no earlier than the row above it. A corrupt journal row is worse than a missing one, because it reads as history.
 
 The completion-gate hook checks that DONE-REPORT.md exists before it will let ACTIVE-TASK.md go to `complete`. Full enforcement detail sits in `.claude/skills/task-lifecycle/SKILL.md`.
 
@@ -211,17 +268,19 @@ When you delegate a `.claude/memory/state/DONE-LOG.md` update, hold the writer t
 ```markdown
 | Task ID  | Completed        | Outcome | Summary                                                              |
 |----------|------------------|---------|----------------------------------------------------------------------|
-| task-[id] | YYYY-MM-DD HH:MM | done|failed | [concise summary]                                                   |
+| task-[id] | YYYY-MM-DD HH:MM UTC | done|failed | [concise summary]                                                   |
 ```
 
 ## The Scratch Workspace
 
-`.claude/memory/agent-documents/` is where sub-agents leave working artifacts mid-task — review reports, half-finished analysis. Keep it while the active task is unfinished; clear it only when a confirmed new task starts (keeping `.gitkeep`).
+`.claude/memory/agent-documents/` is where sub-agents leave working artifacts mid-task — review reports, half-finished analysis, `improvement-scratch.md`. Keep it while the active task is unfinished; clear it only when a confirmed new task starts.
 
 - Any sub-agent may create, update, edit, delete, and reorganise temporary artifacts here during execution.
 - Structure it however the task needs.
 - It is scratch, not record. Durable state still lives in the canonical state and task files.
 - On resume for an unfinished task, read this workspace before you throw any of it away.
+- Clearing is archiving: `.gitkeep` and `README.md` stay, everything else moves into `archive-task-[id]/`, and `improvement-scratch.md` is recreated fresh. Nothing here is deleted — a scratch file is sometimes the only copy of a deliverable that never shipped.
+- Doctrine never lives here. How the system works belongs in agents, skills, and templates; a rule written into this folder is archived at the next task init and goes quiet.
 
 ## Clearing Out Old Tasks
 

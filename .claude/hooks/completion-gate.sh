@@ -50,15 +50,18 @@ if [ -z "$CONTENT" ]; then
   exit 0
 fi
 
-# Is this actually trying to close the task? Case-insensitive, whole word only.
-if ! printf '%s' "$CONTENT" | grep -iq 'Status:[[:space:]]*complete[[:space:]]*$'; then
+# Is this actually trying to close the task? Case-insensitive, and tolerant of both
+# shapes the field turns up in: the field list ("- Status: complete") and a table row
+# ("| Status | complete |"). The separator after "Status" may be ":" or "|".
+if ! printf '%s' "$CONTENT" | grep -iqE 'Status[[:space:]]*[|:][[:space:]]*complete([[:space:]]|\||$)'; then
   # Not a completion. Not our problem.
   exit 0
 fi
 
-# Pull the Task ID out of the content. The line may carry a leading "- ", so match
-# loosely rather than anchoring to the start.
-TASK_ID="$(printf '%s' "$CONTENT" | grep -i 'Task ID:' | sed -E 's/.*[Tt]ask [Ii][Dd]:[[:space:]]*(task-[0-9a-zA-Z_-]+).*/\1/' | head -1)"
+# Pull the Task ID out of the content. Find any line mentioning "Task ID" — field list
+# or table row, the separator doesn't matter — then take the first task-<id> token off
+# it. Matches task-YYYYMMDD-NN and anything else of that shape.
+TASK_ID="$(printf '%s' "$CONTENT" | grep -iE 'Task[[:space:]]*ID' | grep -oE 'task-[0-9A-Za-z_-]+' | head -1)"
 if [ -z "$TASK_ID" ]; then
   echo "[completion-gate.sh] WARNING: Could not parse Task ID from ACTIVE-TASK.md content. Skipping (fail-open)." >&2
   exit 0

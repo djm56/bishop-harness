@@ -61,4 +61,14 @@ These decide who gets coding work while the plan is being written:
 - Structure it however the work needs.
 - It's scratch, not record — no substitute for the canonical state files in `.claude/memory/state/` or the task files in `.claude/memory/tasks/`.
 - For unfinished tasks it survives across sessions, carrying resumable context until the task closes or is deliberately replaced.
-- It gets cleared only on confirmed new-task initialization, and `.gitkeep` always stays.
+- It gets cleared only on confirmed new-task initialization, and clearing means **archiving**: `.gitkeep` and `README.md` stay, everything else moves into `archive-task-[id]/`, and `improvement-scratch.md` is recreated fresh. Nothing here is deleted.
+- `improvement-scratch.md` lives here — the running collection of IMPROVEMENT-NOTE findings that the closing learning pass consolidates.
+
+## Where Memory Lives
+
+- `memory/state/` — `ACTIVE-TASK.md`, `EVENT-LOG.md`, `DONE-LOG.md`. A closed directory: those three plus machine-written state from a registered hook, nothing else.
+- `memory/tasks/task-YYYYMMDD-NN/` — `CONTEXT.md`, `PROGRESS.md`, and `DONE-REPORT.md` at the close. Task IDs carry the UTC creation date and a counter that resets daily.
+- `memory/improvements/` — `IMPROVEMENTS.md` (findings ledger), `PATTERNS.md` (advisory), `agent-notes/<name>.md`.
+- `memory/reference/CONVENTIONS.md` — binding, human-ratified, and never written by an agent.
+
+The whole tree is seeded from `.claude/memory.zip`. Full rules are in [skills/task-lifecycle/SKILL.md](./skills/task-lifecycle/SKILL.md).

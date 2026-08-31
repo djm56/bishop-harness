@@ -47,10 +47,13 @@ Everything lands under `.claude/memory/improvements/`, sorted by what kind of in
 | Kind of insight | Goes to |
 |---|---|
 | Reusable pattern (WordPress practice, theme architecture) | `.claude/memory/improvements/PATTERNS.md` |
-| A change to an agent or skill | `.claude/memory/improvements/IMPROVEMENTS.md` |
+| A specific observed finding — a change to an agent, skill, or tool | `.claude/memory/improvements/IMPROVEMENTS.md` |
 | How a particular agent is performing | `.claude/memory/improvements/agent-notes/<agent-name>.md` |
+| Scratch collection while the task is still running | `.claude/memory/agent-documents/improvement-scratch.md` |
 
-**Format authority**: `.claude/templates/improvement/IMPROVEMENT-TEMPLATE.md` governs all three. Every file is append-only.
+Nothing here is written from memory at the end. Non-`none` IMPROVEMENT-NOTE footers get appended to `improvement-scratch.md` as the steps land, and the closing pass consolidates that list. The scratch file is archived at the next new-task init like anything else in `agent-documents/`.
+
+**Format authority**: `.claude/templates/improvement/IMPROVEMENT-TEMPLATE.md` governs all three. Every file is append-only, and every one of them carries `<!-- Append new entries below this line -->` under its header — new entries go below that marker and below every existing entry, at the very bottom of the file. The marker never moves and nothing already written is displaced.
 
 > **A convention is not an improvement.** `.claude/memory/reference/CONVENTIONS.md` holds binding rules a human ratified, and it sits OUTSIDE this framework — no agent writes to it. If an insight ought to become a hard rule, file it here as an `IMPROVEMENTS.md` suggestion (status `proposed`) and let a human ratify it across. On conflict, `CONVENTIONS.md` (binding) beats `PATTERNS.md` (advisory).
 
@@ -59,11 +62,15 @@ Everything lands under `.claude/memory/improvements/`, sorted by what kind of in
 Proposed changes to an agent prompt or a skill file.
 
 ```
-### [Date] — [Agent/Skill Target]
+### [Date] — [Agent/Skill/Tool Target]
 **Suggestion**: [concrete change]
 **Rationale**: [why this improves outcomes]
-**Status**: proposed | approved | applied | rejected
+**Status**: proposed
+**Approver**: —
+**Date approved**: —
 ```
+
+This is the findings ledger: one entry per observation, specific enough to cite code, paths, and symbols. `Status`, `Approver`, and `Date approved` belong to the human operator — an agent writes `proposed` and dashes, and never touches them again.
 
 ### PATTERNS.md
 
@@ -106,7 +113,7 @@ How a given agent is doing — performance, the context it needs, how briefs lan
 **Context**: Styling responsive layouts with Bootstrap 4.3, where inline @media queries spread quickly.
 **Solution**: Use the media-breakpoint-up() mixin. One .scss module per component, BEM naming: .b-[component]__[element]--[modifier].
 **Example**: .b-hero__content { font-size: 1rem; @include media-breakpoint-up(lg) { font-size: 1.5rem; } }
-**Discovered**: 2026-04-25, task-014
+**Discovered**: 2026-04-25, task-20260425-01
 ```
 
 ---
@@ -115,8 +122,16 @@ How a given agent is doing — performance, the context it needs, how briefs lan
 
 1. **proposed** — newly raised, nobody has looked yet.
 2. **approved** — reviewed and accepted.
-3. **applied** — actually implemented in the target agent prompt or skill file.
+3. **applied** — actually implemented in the target agent prompt or skill file, or generalised into a ratified `CONVENTIONS.md` entry.
 4. **rejected** — reviewed and turned down, with the reason written down.
+
+`retired` and `superseded` are the other terminal states, for an entry overtaken by events or replaced by a later one. Every transition is the human operator's; no agent moves a status.
+
+## When The Same Finding Keeps Coming Back
+
+Three or more entries saying the same thing is not a ledger problem. It means an agent or skill definition has a hole in it, and the fix belongs there rather than in a fourth entry.
+
+That fix is a **proposal, not an edit**. Agent and skill definitions are human-ratified, exactly like `CONVENTIONS.md`: record the proposal, put it in front of the operator, and leave the definition alone until they ratify it.
 
 ## What Not To Write
 
