@@ -1,0 +1,33 @@
+# Ignore everything by default
+*
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea
+
+
+# But do not ignore these
+!.gitignore
+!.deployignore
+!README.md
+!CLAUDE.md
+!.claude/
+!.claude/**
+!install-harness.sh
+!INSTALL.md
+
+# Ignore local agent memory files
+.claude/memory/
+.claude/about/
+
+.claude/node_modules/
+.claude/package.json
+.claude/package-lock.json
+
+.DS_Store
+.DS_Store?

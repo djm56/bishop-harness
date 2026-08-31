@@ -1,0 +1,10 @@
+# Local, machine-specific Claude Code settings (never commit)
+settings.local.json
+
+# OS / editor cruft
+.DS_Store
+__MACOSX/
+
+# Transient agent working memory (regenerated per task; keep the folder, drop its contents)
+memory/agent-documents/*
+!memory/agent-documents/.gitkeep
