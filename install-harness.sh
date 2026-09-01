@@ -550,7 +550,7 @@ print_final_report() {
   echo "  1. (Optional) Run /about-setup in Claude Code to create operator profile"
   echo "  2. Populate .claude/memory/reference/CONVENTIONS.md with project rules"
   echo "  3. Open a Claude Code session in the target repository"
-  echo "  4. Confirm that hooks fire and /start-task initializes state correctly"
+  echo "  4. Confirm that hooks fire and /mission initializes state correctly"
   echo ""
   echo "═══════════════════════════════════════════════════════════════"
 }

@@ -51,9 +51,9 @@ Task IDs are `task-YYYYMMDD-NN` — see the Task IDs section of `.claude/skills/
 
 | Timestamp | Task ID | Step | Agent | Event | Note |
 |-----------|---------|------|-------|-------|------|
-| 2026-08-14 09:20 UTC | task-20260814-01 | 1 | @doc-writer | step-sync | CONTEXT and PROGRESS initialized |
-| 2026-08-14 09:52 UTC | task-20260814-01 | 2 | @jnr-developer | step-sync | Search filter implemented |
-| 2026-08-14 10:15 UTC | task-20260814-01 | 3 | @code-reviewer | step-sync | Approved, no critical findings |
+| 2026-08-14 09:20 UTC | task-20260814-01 | 1 | @lambert | step-sync | CONTEXT and PROGRESS initialized |
+| 2026-08-14 09:52 UTC | task-20260814-01 | 2 | @hicks | step-sync | Search filter implemented |
+| 2026-08-14 10:15 UTC | task-20260814-01 | 3 | @apone | step-sync | Approved, no critical findings |
 | 2026-08-14 10:31 UTC | task-20260814-01 | — | task-20260814-01 | complete | All steps done, DONE-REPORT written |
 ```
 

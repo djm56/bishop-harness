@@ -1,6 +1,6 @@
 ---
 name: git-workflow
-description: "Git workflow conventions covering branch naming, task branch creation, dual PR workflow (master + staging), merge conflict resolution including staging-specific branching, and commit guidelines. Used by jnr-developer and snr-developer."
+description: "Git workflow conventions covering branch naming, task branch creation, dual PR workflow (master + staging), merge conflict resolution including staging-specific branching, and commit guidelines. Used by the junior developer (hicks) and senior developer (vasquez)."
 ---
 
 # Working With Git

@@ -8,7 +8,7 @@ The reference for appending to the files in `.claude/memory/improvements/`.
 
 Read the file before you write to it, find the last existing entry, and append after that. Never insert between entries, never rewrite the header or the marker, and never remove content to make room.
 
-**Status.** Every new entry starts at `Status: proposed`. Only the human operator moves it along — `proposed → approved → applied`, with `rejected`, `retired`, and `superseded` as terminal branches. No agent, doc-writer included, ever changes the status on an existing entry, and no agent fills in `Approver` or `Date approved`.
+**Status.** Every new entry starts at `Status: proposed`. Only the human operator moves it along — `proposed → approved → applied`, with `rejected`, `retired`, and `superseded` as terminal branches. No agent, lambert (doc writer) included, ever changes the status on an existing entry, and no agent fills in `Approver` or `Date approved`.
 
 ---
 
@@ -31,7 +31,7 @@ Appended at the bottom of the file, below the marker and below every existing en
 
 **Rules:**
 
-- The target is a named agent (`@jnr-developer`), a skill (`task-lifecycle`), or a tool concept. Not a vague area.
+- The target is a named agent (`@hicks`), a skill (`task-lifecycle`), or a tool concept. Not a vague area.
 - The suggestion has to be implementable without anyone coming back to ask what it means.
 - Status is `proposed` on creation. Never anything else.
 - **Approver** and **Date approved** belong to the human. No agent fills them in — they're recorded when a human moves status to `approved`.

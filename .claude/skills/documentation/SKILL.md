@@ -1,6 +1,6 @@
 ---
 name: documentation
-description: "Technical documentation writing skill covering README structure, changelog maintenance, architecture decision records (ADRs), user-facing docs, and state file management. Used by doc-writer sub-agent."
+description: "Technical documentation writing skill covering README structure, changelog maintenance, architecture decision records (ADRs), user-facing docs, and state file management. Used by the doc writer sub-agent (lambert)."
 ---
 
 # Writing Documentation

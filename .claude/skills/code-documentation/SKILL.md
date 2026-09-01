@@ -1,6 +1,6 @@
 ---
 name: code-documentation
-description: "Code documentation standards skill covering JSDoc/PHPDoc docblock formats, function parameter documentation, return type documentation, exception documentation, and inline code comments for complex logic. Used by jnr-developer and snr-developer."
+description: "Code documentation standards skill covering JSDoc/PHPDoc docblock formats, function parameter documentation, return type documentation, exception documentation, and inline code comments for complex logic. Used by the junior developer (hicks) and senior developer (vasquez)."
 ---
 
 # Documenting Code

@@ -16,12 +16,12 @@ CLAUDE.md                           # Entry point
 .claude/AGENT-INDEX.md              # Crew index and runtime layout
 .claude/agents/                     # Bishop plus four specialists
   ├── bishop.md                     # Primary agent
-  ├── jnr-developer.md
-  ├── code-reviewer.md
-  ├── snr-developer.md
-  └── doc-writer.md
+  ├── hicks.md
+  ├── apone.md
+  ├── vasquez.md
+  └── lambert.md
 .claude/commands/                   # Slash commands
-  ├── start-task.md
+  ├── mission.md
   └── about-setup.md
 .claude/skills/                     # Reusable skills
   ├── task-lifecycle/SKILL.md
@@ -122,7 +122,7 @@ The hook wiring already sits in the portable `settings.json` via `${CLAUDE_PROJE
    unzip -o memory.zip
    ```
 
-   That builds `.claude/memory/` with the state and task folders initialized. It has to exist before any `/start-task`.
+   That builds `.claude/memory/` with the state and task folders initialized. It has to exist before any `/mission`.
 
 3. **Fix the hook permissions.** Copying doesn't reliably preserve the executable bit:
 
@@ -163,10 +163,10 @@ The hook wiring already sits in the portable `settings.json` via `${CLAUDE_PROJE
    /agents
    ```
 
-   Bishop and the four specialists should be there. Then:
+   Bishop and the four specialists should be there. If an agent is missing from `/agents` or an agent edit has not taken effect, restart Claude Code — the agent registry is read at session start, while skills and commands update immediately. Then:
 
    ```text
-   /start-task Create a test task
+   /mission Create a test task
    ```
 
    You want to see:
@@ -231,7 +231,7 @@ Use `--dry-run` first on any repo you care about. It's the cheapest way to see e
 | `settings.local.json` written | Right `additionalDirectories` path, right tool permissions |
 | Untracked | `.claude/` and `CLAUDE.md` in `.git/info/exclude` |
 | Crew loads | `claude` → `/agents` shows Bishop and four specialists |
-| State initializes | `/start-task test` creates `ACTIVE-TASK.md` and sets up `EVENT-LOG.md` |
+| State initializes | `/mission test` creates `ACTIVE-TASK.md` and sets up `EVENT-LOG.md` |
 | Hooks fire | Edit a file, then look for a `step-sync` row in `EVENT-LOG.md` |
 
 ## When Things Don't Work

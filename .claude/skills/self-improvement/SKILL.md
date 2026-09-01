@@ -11,8 +11,8 @@ The learning pass is **mandatory at the end of every task**. Bishop runs it whet
 
 - Sub-agents attach findings to their step completion report, **only when they actually found something**. Saying nothing is a valid outcome.
 - Bishop gathers those reports plus its own observations once the task is done.
-- Where something concrete exists, Bishop hands the writes to `@doc-writer`, pointing at `.claude/templates/improvement/IMPROVEMENT-TEMPLATE.md` for format.
-- `@doc-writer` does the appending. Bishop never writes these files directly.
+- Where something concrete exists, Bishop hands the writes to `@lambert` (doc writer), pointing at `.claude/templates/improvement/IMPROVEMENT-TEMPLATE.md` for format.
+- `@lambert` does the appending. Bishop never writes these files directly.
 
 ## How It Flows
 
@@ -22,13 +22,13 @@ Sub-agent finishes a step
        └─ Bishop collects reports as the task runs
             └─ At completion, Bishop reviews everything collected plus its own observations
                  └─ Anything concrete?
-                      └─ Bishop delegates the writes to @doc-writer
-                           └─ @doc-writer appends, using IMPROVEMENT-TEMPLATE.md
+                      └─ Bishop delegates the writes to @lambert
+                           └─ @lambert appends, using IMPROVEMENT-TEMPLATE.md
 ```
 
 - A sub-agent with nothing to report says nothing. No "no issues here" message needed.
 - Bishop decides what qualifies before delegating anything.
-- `@doc-writer` gets named files and exact content. It doesn't decide what's worth recording.
+- `@lambert` gets named files and exact content. It doesn't decide what's worth recording.
 - Everything is created as `proposed`. Only the human operator moves it on.
 
 ## The Bar An Entry Has To Clear
@@ -100,7 +100,7 @@ How a given agent is doing — performance, the context it needs, how briefs lan
 **IMPROVEMENTS.md**
 
 ```
-### 2026-05-04 — snr-developer
+### 2026-05-04 — vasquez
 **Suggestion**: Add a pre-flight checklist to the agent file: before starting block development, verify ACF config, check component lifecycle, confirm Bootstrap 4.3 constraints.
 **Rationale**: These constraints tend to surface halfway through implementation. Checking first moves the discovery earlier and cuts rework.
 **Status**: approved

@@ -34,17 +34,17 @@ Bishop's character and rules live in [`.claude/SOUL.md`](.claude/SOUL.md). The o
 
 ## The Crew
 
-| Agent | Job |
-|-------|-----|
-| **Bishop** (`@bishop`) | In command. Frames the work, delegates it, checks it, closes it. Writes no code. |
-| `@jnr-developer` | Builds. Every coding step starts here, whatever the task looks like. |
-| `@code-reviewer` | Reads every diff. Reports findings, never rewrites. Runs after each coding step. |
-| `@snr-developer` | In reserve. Steps in only after the junior has failed two fix rounds on the same critical issue. |
-| `@doc-writer` | Documentation, plus every update to the state files. |
+| Agent | Role | Job |
+|-------|------|-----|
+| **Bishop** (`@bishop`) | commander | In command. Frames the work, delegates it, checks it, closes it. Writes no code. |
+| `@hicks` | junior developer | Builds. Every coding step starts here, whatever the task looks like. |
+| `@apone` | code reviewer | Reads every diff. Reports findings, never rewrites. Runs after each coding step. |
+| `@vasquez` | senior developer | In reserve. Steps in after the junior has completed two fix rounds on the task, or when the same CRITICAL finding persists after two junior fix rounds — whichever comes first. |
+| `@lambert` | doc writer | Documentation, plus every update to the state files. |
 
 Bishop loads automatically from [`CLAUDE.md`](CLAUDE.md) at the repo root. The rest sit in [`.claude/agents/`](.claude/agents/) and get called through the Task tool.
 
-That third row is the one people query. The senior developer is deliberately not available for planning — you can't assign work to it, and neither can Bishop. It only appears when the normal path has demonstrably failed twice. That constraint is what stops "this looks hard" turning into an excuse to skip the pipeline.
+That third row is the one people query. The senior developer is deliberately not available for planning — you can't assign work to it, and neither can Bishop. It only appears when either the junior has completed two fix rounds on the task, or a CRITICAL finding survives two separate junior fix rounds — whichever comes first. That constraint is what stops "this looks hard" turning into an excuse to skip the pipeline.
 
 ## Getting Set Up
 
@@ -106,11 +106,13 @@ Once per machine. After that the session comes back on its own.
 /agents
 ```
 
-You're looking for `bishop`, `jnr-developer`, `code-reviewer`, `snr-developer`, and `doc-writer`. Or just ask:
+You're looking for `bishop`, `hicks`, `apone`, `vasquez`, and `lambert`. Or just ask:
 
 ```text
 @bishop report crew status
 ```
+
+If you edit an agent definition and the change does not appear in `/agents`, restart Claude Code — the agent registry is read at session start. Skills and commands take effect immediately when edited.
 
 ## Using It From VS Code
 
@@ -124,18 +126,18 @@ You're looking for `bishop`, `jnr-developer`, `code-reviewer`, `snr-developer`, 
 There's one way in:
 
 ```text
-/start-task <what you want done>
+/mission <what you want done>
 ```
 
-Bishop restates the goal, writes a numbered plan, sends every coding step to `@jnr-developer` with a `@code-reviewer` step directly behind it, and syncs state to disk after **every** step. Stop halfway through and the next session picks up exactly where you left off.
+Bishop restates the goal, writes a numbered plan, sends every coding step to `@hicks` with an `@apone` step directly behind it, and syncs state to disk after **every** step. Stop halfway through and the next session picks up exactly where you left off.
 
 The rules are written down once, in [`.claude/skills/task-lifecycle/SKILL.md`](.claude/skills/task-lifecycle/SKILL.md). If anything else in the repo contradicts that file, that file wins.
 
 Three constraints don't bend:
 
-1. Every coding step goes to `@jnr-developer`, no matter how the task looks.
-2. Every coding step is followed immediately by `@code-reviewer`.
-3. `@snr-developer` never appears in an initial plan. It arrives by escalation or not at all.
+1. Every coding step goes to `@hicks`, no matter how the task looks.
+2. Every coding step is followed immediately by `@apone`.
+3. `@vasquez` never appears in an initial plan. It arrives by escalation or not at all.
 
 ## Memory
 
@@ -269,8 +271,9 @@ claude
 /agents
 ```
 
-If they're still missing:
+If an agent file exists in `.claude/agents/` but does not appear in `/agents`, or an edit to an agent definition has not taken effect, restart Claude Code — the agent registry is read at session start.
+
+If the restart does not resolve it:
 
 1. Check `.claude/agents/` exists and has all five files in it.
 2. Run `claude doctor`.
-3. Restart and try `/agents` once more.
