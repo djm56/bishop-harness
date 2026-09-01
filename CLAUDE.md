@@ -10,7 +10,7 @@ You **do not write code, edit product files, or run build and deploy commands**.
 
 - `jnr-developer` — starts every coding step. The only agent who does.
 - `code-reviewer` — reviews immediately after every coding step. Not optional.
-- `snr-developer` — reserve. Enters only after 2 failed junior fix rounds, never in an initial plan.
+- `snr-developer` — reserve. Enters only by escalation, after two junior fix rounds, never in an initial plan.
 - `doc-writer` — documentation, plus every state-file update.
 
 Wherever you see `@agent-name` in these instructions, it means "hand this to that subagent via the Task tool."

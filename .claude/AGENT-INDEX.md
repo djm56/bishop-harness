@@ -26,7 +26,7 @@ Running on Claude Code, the pieces sit like this:
 |----------|------|-------|--------------|
 | @bishop | primary | opus | Commands the crew. Frames, delegates, checks, closes. Writes no code. |
 | @jnr-developer | subagent | haiku | Builds. Takes every scoped coding step. |
-| @snr-developer | subagent | sonnet | **Reserve.** Picks up code after @jnr-developer burns 2 fix rounds. Never in an initial plan. |
+| @snr-developer | subagent | sonnet | **Reserve.** Picks up code after @jnr-developer completes two fix rounds. Never in an initial plan. |
 | @code-reviewer | subagent | sonnet | Reads diffs for correctness, security, style, and docs. |
 | @doc-writer | subagent | haiku | READMEs, docblocks, changelogs, API docs, and every state file. |
 
@@ -51,7 +51,7 @@ These decide who gets coding work while the plan is being written:
 
 1. **Every coding step goes to @jnr-developer.** All of them. Complexity, architecture, and performance change nothing.
 2. **@code-reviewer comes straight after every coding step.** No step that produces code exists without a review step as the very next numbered step.
-3. **@snr-developer only arrives by escalation.** Never in the initial plan. It enters when @jnr-developer has failed 2 fix rounds on the same CRITICAL issue, confirmed by 2 separate @code-reviewer reviews — and Bishop escalates at that point, not before.
+3. **@snr-developer only arrives by escalation.** Never in the initial plan. Bishop escalates when either trigger fires, whichever comes first: the same CRITICAL finding is still open after two junior fix rounds, confirmed by two separate @code-reviewer reviews; or @jnr-developer has completed two fix rounds on this task, whatever the severity of the findings.
 
 **Break any of these** — @snr-developer in an initial step, or a coding step with no review behind it — and the plan is INVALID. Rewrite it before execution starts.
 

@@ -66,7 +66,7 @@ Statuses run `pending` → `in-progress` → `done` | `failed`. A step becomes `
 1. Restate the goal and set out what "done" actually means.
 2. Name the risks, dependencies, and assumptions you're working under.
 3. Write a numbered plan. Every step names the sub-agent who owns it.
-4. **Delegation constraint (mandatory):** every coding step goes to `@jnr-developer`. `@snr-developer` never appears in an initial plan — it's reached only through the Code-Quality Pipeline, after 2 failed junior fix rounds. A plan that puts `@snr-developer` on a coding step is INVALID; rewrite it.
+4. **Delegation constraint (mandatory):** every coding step goes to `@jnr-developer`. `@snr-developer` never appears in an initial plan — it is reached only through the Code-Quality Pipeline, after two junior fix rounds. A plan that puts `@snr-developer` on a coding step is INVALID; rewrite it.
 5. Any step that writes or changes code is followed immediately by `@code-reviewer`. No exceptions.
 6. Derive the task ID yourself: `task-YYYYMMDD-NN` — today's UTC date, plus a counter that resets daily. Take the highest `NN` already used for that date across both the `tasks/task-<date>-*` folders and the rows mentioning them in `EVENT-LOG.md` and `DONE-LOG.md`, and add one; `01` if there are none. Folders get cleaned up, the logs don't — check both so an ID never comes back around.
 7. Hand task initialization to `@doc-writer`, passing the derived ID: archive agent-documents (keep `.gitkeep` and `README.md`, move the rest to `archive-task-[id]/`, recreate `improvement-scratch.md`, return `ls -la` as evidence), build CONTEXT.md and PROGRESS.md from TASK-TEMPLATE.md exactly, initialize ACTIVE-TASK, confirm EVENT-LOG.md is present. **All five confirmed before step 1 runs.**

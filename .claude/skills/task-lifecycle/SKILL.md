@@ -102,6 +102,7 @@ That check is reported as part of the sync confirmation. A failed check gets cor
 | **Task start** — before step 1 of a genuinely new task | Build `tasks/task-[id]/CONTEXT.md` and `PROGRESS.md` from `.claude/templates/task/TASK-TEMPLATE.md`, copied exactly — same headings, order, structure. Fill in the planned-step rows in `PROGRESS.md`; the plan lives there. Initialize `ACTIVE-TASK.md` with the new task id and status `in-progress`. Confirm `EVENT-LOG.md` exists. Clear `.claude/memory/agent-documents/` — but only once you've confirmed the previous task is complete or deliberately replaced, and clear it in the sense defined under The Scratch Workspace below: archive, don't delete. That item needs a shell, so it only goes to an agent whose `tools:` allowlist grants Bash. |
 | **After EVERY numbered step** | Hand a state-sync to @doc-writer: append the EVENT-LOG.md row, update the ACTIVE-TASK.md pointer, mark the step done in PROGRESS.md. All three, one delegation. Mandatory — and handed over **in the same turn as the step report that triggered it**. A sync mentioned in a closing sentence and left for the next turn has been skipped, not started. The step went to `in-progress` when its brief was delegated; the sync is what marks it `done`. |
 | **Operator-injected step** — scope the operator adds mid-task | The PROGRESS.md row goes in **before** the work is delegated: status `in-progress`, note `(operator-directed, injected HH:MM UTC)`. From there it takes the same per-step sync as anything else. A row backfilled afterwards is a record repaired rather than a record kept — for the whole time the work was in flight, the state on disk didn't mention it. Urgency is the reason to write the row, not the excuse for skipping it; it costs one delegation. |
+| **Bishop-injected step** — a cleanup, correction, or remediation Bishop orders, including work arising from the closing tracker check | The PROGRESS.md row goes in **before** the work is delegated: status `in-progress`, note `(bishop-directed, injected HH:MM UTC)`. From there it takes the same per-step sync as anything else. This applies after the final numbered step as much as during the plan — remediation found by the closing tracker check is a step, and the plan grows by one. A deliverable changed with no row and no sync row is the unrecorded work that check exists to catch. |
 | **Step resumed mid-flight** — picked up from an agent's transcript rather than restarted | The resuming agent opens with a state report saying what it had and hadn't written to disk before the interruption. The step isn't synced done until that report exists, or the next step has to work it out from scratch. |
 | **Task completion** — after the final step | Run the learning pass (BLOCKING). Only then set `ACTIVE-TASK.md` to complete. Only then append to `DONE-LOG.md`. |
 
@@ -208,7 +209,10 @@ Who gets coding work. Applies while planning *and* while executing. Bishop enfor
 ### Rule 3 — @snr-developer only by escalation
 
 - `@snr-developer` arrives through the Code-Quality Pipeline below, and no other way.
-- The single trigger: `@jnr-developer` fails 2 fix rounds on the same CRITICAL issue, with 2 separate `@code-reviewer` reviews confirming it's still open.
+- Bishop escalates when **either** trigger fires, whichever comes first:
+  - **Severity trigger** — the same CRITICAL finding is still open after two junior fix rounds, confirmed by two separate `@code-reviewer` reviews. Counted **per issue**.
+  - **Round trigger** — `@jnr-developer` has completed two fix rounds on this task, whatever the severity of the findings. Counted **per task**.
+- Neither trigger outranks the other. Zero CRITICAL findings does not extend the round allowance.
 - Bishop never pre-plans that step. It appears during execution or not at all.
 
 ### Breaking Them
@@ -217,7 +221,8 @@ Who gets coding work. Applies while planning *and* while executing. Bishop enfor
 |---------------|---------------|
 | `@snr-developer` given a step in the initial plan | Plan INVALID. Rewrite before executing. |
 | A coding step without `@code-reviewer` immediately after | Plan INVALID. Rewrite before executing. |
-| Escalating to `@snr-developer` before 2 confirmed junior rounds | Escalation INVALID. Finish the junior rounds. |
+| Escalating to `@snr-developer` before two confirmed junior rounds | Escalation INVALID. Finish the junior rounds. |
+| A third junior fix round instead of escalating | Escalation SKIPPED. Task BLOCKED until `@snr-developer` takes it. |
 | Code shipped without a `@code-reviewer` pass | Quality contract broken. Task BLOCKED. |
 | "It's complex" / "it's architectural" used to justify `@snr-developer` up front | Not a valid reason. Rule 1 has no exceptions. |
 
@@ -229,9 +234,9 @@ Any step where `@jnr-developer` or `@snr-developer` creates or changes files out
 
 1. `@code-reviewer` reviews the output. Always. There is no "too trivial to review".
 2. **CRITICAL** findings → fix goes to `@jnr-developer` → `@code-reviewer` reviews again. That's a new numbered pair of steps.
-3. Junior gets **2 fix rounds** (each round = one fix step plus one review step). Same CRITICAL issue still open after both → escalate to `@snr-developer`.
-4. `@snr-developer` remediates → `@code-reviewer` reviews again. Senior gets **2 rounds**.
-5. Still failing after 2 senior rounds → stop and escalate to the operator. Do not keep going.
+3. Junior gets **two fix rounds** (each round = one fix step plus one review step). Escalate to `@snr-developer` when the same CRITICAL finding is still open after both, or when both rounds are used whatever the severity — whichever comes first. A junior step answering something other than a review does not increment the counter, but still takes a review immediately behind it.
+4. `@snr-developer` remediates → `@code-reviewer` reviews again. Senior gets **two fix rounds**.
+5. Still failing after two senior rounds → stop and escalate to the operator. Do not keep going.
 6. `@doc-writer` updates docs only where it's warranted: a public API changed, new files appeared, or something README-relevant moved.
 
 The review step is a numbered plan step like any other, and it gets its own state-sync afterwards.
@@ -325,7 +330,7 @@ Once every step is done, in this exact order:
 
 1. [ ] Final state-sync (last step marked done, EVENT-LOG row appended with event=step-sync)
 2. [ ] Closing summary written for the operator
-3. [ ] **Tracker-and-reality check (BLOCKING):** diff every canonical tracker the task touched — a project `progress.md`, a README status table, anything that claims what's done — against what's actually on disk. Drift either way is a blocking discovery: code present with no completed step, or a tracker claiming completion with the code missing. Sync the tracker before closing, or record the drift explicitly in `DONE-REPORT.md` using the three kinds of not done from Terms above.
+3. [ ] **Tracker-and-reality check (BLOCKING):** diff every canonical tracker the task touched — a project `progress.md`, a README status table, anything that claims what's done — against what's actually on disk. Drift either way is a blocking discovery: code present with no completed step, or a tracker claiming completion with the code missing. Sync the tracker before closing, or record the drift explicitly in `DONE-REPORT.md` using the three kinds of not done from Terms above. Remediation you carry out here is a step: give it a PROGRESS.md row and a sync before continuing the close, then note the drift and its fix in `DONE-REPORT.md`.
 4. [ ] **Learning pass run (BLOCKING — you cannot skip it):**
    - 4a. [ ] Bishop reads `.claude/memory/agent-documents/improvement-scratch.md` — the notes collected as the steps ran. That list *is* the input; the pass consolidates it rather than recalling it.
    - 4b. [ ] Bishop reviews its own observations — Bishop-level patterns, agent behaviour, delegation and skill gaps
@@ -433,8 +438,8 @@ OPERATOR REQUEST
 | State-sync after each step, in the same turn | Blocking gate | Next step can't start |
 | 3-target sync validation (EVENT-LOG + ACTIVE-TASK + PROGRESS) | Blocking gate | Execution can't continue |
 | EVENT-LOG row re-read and verified after append | Blocking gate | Sync can't be reported complete |
-| 2 junior fix rounds maximum | Escalation rule | Must go to @snr-developer |
-| 2 senior fix rounds maximum | Escalation rule | Must go to the operator |
+| Two junior fix rounds maximum, per task | Escalation rule | Must go to @snr-developer |
+| Two senior fix rounds maximum | Escalation rule | Must go to the operator |
 | Tracker-and-reality check at completion | Blocking gate | Task can't close |
 | Learning pass at completion | Blocking gate | Task can't close |
 | DONE-REPORT written at completion | Blocking gate | Task can't close |

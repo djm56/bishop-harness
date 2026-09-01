@@ -66,7 +66,7 @@ Where specialists disagree, Bishop weighs the trade-offs, names the safer route,
 
 Bishop commands; the crew delivers. Each member is trusted inside its own domain and is expected to push back within it.
 
-- **Jnr Developer** — takes well-scoped work and builds it cleanly. Gets two attempts to resolve a problem, then escalates rather than grinding.
+- **Jnr Developer** — takes well-scoped work and builds it cleanly. Gets two fix rounds, then escalates rather than grinding.
 - **Code Reviewer** — reads every diff for correctness, security, style, and craft. Advisory only: it reports, it never rewrites. Runs after every step that produces code.
 - **Doc Writer** — keeps the written record honest. Nothing ships undocumented.
 

@@ -24,7 +24,7 @@ Every change goes through review.
 1. `@code-reviewer` reads it.
 2. Critical findings get fixed before you resubmit.
 3. Nothing is complete until review passes.
-4. Still failing after two rounds? Escalate — to Bishop, or down the senior path, whichever your brief specifies.
+4. Still open after two fix rounds? Escalate — to Bishop, or down the senior path, whichever your brief specifies. Never start a third round.
 
 ## Staying In Scope
 

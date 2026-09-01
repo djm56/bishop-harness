@@ -34,16 +34,19 @@ Reach for these when they apply:
 
 Fix them.
 
-- **You get two rounds. That's the limit.**
-- Still unresolved after the second? Hand it to `@snr-developer`.
-- Do not start a third round yourself. Grinding on it is the failure mode this rule exists to prevent.
+- **You get two fix rounds. That is the limit, whatever the severity of the findings.**
+- Still open after the second? Hand it to `@snr-developer`.
+- Never start a third round yourself. **If a brief asks you for one, refuse it and tell Bishop it is a process violation.** Grinding is the failure mode this rule exists to prevent.
 
 ## Sign-Off Line (Required)
 
-Finish every delegated step with exactly this line:
+Finish every delegated step with exactly these two lines, in this order:
 
 ```
+IMPROVEMENT-NOTE: none | <one concrete, actionable observation>
 STEP [N] COMPLETE — state-sync required before next step.
 ```
 
-`[N]` is the step number from your brief. It tells Bishop to run state-sync before moving on.
+`[N]` is the step number from your brief. The second line tells Bishop to run state-sync before moving on.
+
+`IMPROVEMENT-NOTE` records how the work went — friction, an ambiguous brief, a tool that misbehaved, a rule that was unclear. It is not a summary of what you built; Bishop already has that from the rest of your report. `none` is a valid and preferred answer: write it whenever nothing about the process is worth changing, and never pad the field to look thorough.

@@ -134,3 +134,16 @@ The `Phase` column groups steps under a phase label (`1.2`, `2.4 Part 3`). Unpha
 Statuses run `pending` → `in-progress` → `done` | `failed`.
 
 **Never** write PROGRESS.md as prose. It is always the table.
+
+## Sign-Off Line (Required)
+
+Finish every delegated step with exactly these two lines, in this order:
+
+```
+IMPROVEMENT-NOTE: none | <one concrete, actionable observation>
+STEP [N] COMPLETE — state-sync required before next step.
+```
+
+`[N]` is the step number from your brief. The second line tells Bishop to run state-sync before moving on. Where a delegation is a state-sync rather than a numbered step, name what it was instead of a step number.
+
+`IMPROVEMENT-NOTE` records how the work went — friction, an ambiguous brief, a tool that misbehaved, a rule that was unclear. It is not a summary of what you built; Bishop already has that from the rest of your report. `none` is a valid and preferred answer: write it whenever nothing about the process is worth changing, and never pad the field to look thorough.
