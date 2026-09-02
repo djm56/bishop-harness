@@ -62,7 +62,7 @@ Illustrative only. `DIR-NNN` is a placeholder and can't collide with a live ID â
 
 ```
 ### DIR-NNN â€” Hook registrations name their callbacks
-- **Applies when:** A change registers a hook, action, filter, or event listener.
+- **Applies when:** A change registers a hook or event listener.
 - **Status:** active
 - **Rule:** A registration MUST reference a named callback defined in the layer that owns the behaviour. An inline closure or a function body defined at the registration site MUST NOT be introduced, and a registration MUST be appended at the end of its section rather than inserted mid-list.
 - **Rationale:** A behaviour defined at its registration site cannot be tested, found, or replaced without editing the wiring.

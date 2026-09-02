@@ -1,131 +1,111 @@
 ---
 name: git-workflow
-description: "Git workflow conventions covering branch naming, mission branch creation, dual PR workflow (master + staging), merge conflict resolution including staging-specific branching, and commit guidelines. Used by the junior developer (hicks) and senior developer (vasquez)."
+description: "Git workflow conventions covering branch naming, mission branches, pull requests, merge conflict resolution, commit guidelines, and the boundary where merging and deploying stop being the agent's job. Works with trunk-based development, GitHub Flow, GitFlow, or any other model. Used by the junior developer (hicks) and senior developer (vasquez)."
 ---
 
 # Working With Git
 
-## Two Kinds Of Branch
-
-- **Environment branches** — `master`/`main` (production), `staging`, and optionally `development`/`develop`. PROTECTED. Nothing is ever pushed straight to them.
-- **Mission branches** — prefixed `mission/`, one per mission, merged in through a PR or MR.
-
-## Naming
+## Branches
 
 Branch names are **always lowercase**.
 
+**Protected branches** — the default branch (usually `main`), production branches, and any long-lived branches the project maintains such as `develop`, `staging`, or release branches. Nothing is pushed straight to them. Every change arrives through a PR or MR.
+
+**Mission branches** — prefixed `mission/`, one per mission, merged in through a PR or MR.
+
+## Branch Naming
+
 | Situation | Pattern |
 |-----------|---------|
-| One developer | `mission/{mission-id}/{mission-title}/{username}/{environment-branch}` |
-| Multi-dev release | `mission/{mission-id}/{mission-title}/release/{environment-branch}` |
-| Sub-mission | `mission/{mission-id}/{mission-title}/{sub-mission-title}/{username}/{environment-branch}` |
-| Shared multi-dev sub-mission | `mission/{mission-id}/{mission-title}/{sub-mission-title}/{environment-branch}` |
+| Mission branch | `mission/{mission-id}/{short-title}/{target-branch}` |
+| Sub-mission branch | `mission/{mission-id}/{short-title}/{sub-title}` |
 
-Sub-branches come off their parent and their MRs target that parent. Pull from the parent often so you don't drift.
+`{target-branch}` is the branch you intend to merge into — `main`, `develop`, or whatever the project uses. Naming it keeps the branch self-documenting.
+
+A sub-mission branch carries no target segment. It is cut from its parent and its PR targets the parent, and the shared prefix already says which parent that is. Pull from the parent often so you don't drift.
 
 ## Starting A Mission Branch
 
-1. Branch from `master`/`main`.
-2. Get the branch name from the team lead.
-3. Check out the target, pull, then cut your branch.
+1. Check the project's branching model first. If it maintains long-lived branches beyond the default, follow that convention rather than assuming one.
+2. Check out the target branch, pull, then cut your branch.
 
 ```bash
-git checkout master
-git pull origin master
-git checkout -b mission/{id}/{title}/{username}/master
+git checkout {target-branch}
+git pull origin {target-branch}
+git checkout -b mission/{mission-id}/{short-title}/{target-branch}
 ```
 
-## Opening PRs
+## Opening A PR Or MR
 
-Every mission needs **at least two PRs, opened together**:
-
-1. One into `master`/`main`
-2. One into `staging`
-
-- **Title** — mission title plus destination, e.g. "Add login form → master"
-- **Description** — what changed overall, plus the Asana mission link
-- **Reviewer** — the team lead, usually the Lead Developer
+- **Title** — what changed, and the branch it targets
+- **Description** — what changed, why, and anything a reviewer needs to know
+- **Reviewer** — follow the project's review process
 - PR on GitHub, MR on GitLab. Same thing.
 
-## Conflicts
+Keep it small enough to actually review. A PR that has outgrown its mission brief is two PRs.
+
+If the project has a PR or MR template, follow it.
+
+## Handling Conflicts
 
 Clear conflicts before you send anything for review.
 
-### Against master/main
-
-1. Merge master into your mission branch.
+1. Fetch, then merge the target branch into your mission branch.
 2. Resolve locally.
-3. Push — then check **both** PRs.
+3. Check the resolution — read the diff, run the tests if they are quick.
+4. Commit and push.
 
 ```bash
-git checkout mission/{branch}
-git merge origin/master
+git fetch origin
+git merge origin/{target-branch}
 # resolve conflicts
 git add .
 git commit
 git push
 ```
 
-### Against staging
+### Reading Conflict Markers
 
-**Do not merge staging into your mission branch.** Instead:
-
-1. Close the original staging PR.
-2. Cut a **fresh** branch from `staging`:
-   ```bash
-   git checkout staging
-   git pull origin staging
-   git checkout -b mission/{id}/{title}/{username}/staging
-   ```
-3. Merge your original mission branch into it:
-   ```bash
-   git merge mission/{id}/{title}/{username}/master
-   ```
-4. Resolve, push, open a new PR to staging.
-
-**Why the extra step**: it keeps the master-targeting branch free of staging history.
-
-### Reading The Markers
-
-- `<<<<<<<` — start of the receiving (current) changes
+- `<<<<<<<` — start of your changes, the receiving branch
 - `=======` — the divider
 - `>>>>>>>` — end of the incoming changes
 
-Keep receiving, keep incoming, keep both, or write something new.
+Keep what you need, drop what you don't, or write something new.
 
 **Never push an unresolved conflict** — anything still carrying `<<<<<<<`.
 
-Unsure how a conflict should resolve? Take it to the team lead.
+A genuinely ambiguous conflict — competing logic, clashing values — is a decision, not a merge. Stop and ask.
 
 ## Commits
 
-- **Conventional Commits** format; commitizen is a good way to stay honest.
+- **Conventional Commits** format. It keeps history readable.
 - `feat: add login form`, `fix: correct null check in user service`, `chore: update dependencies`
-- Run `git diff --staged` before you commit and check for secrets, `.env` files, and dependency or lockfile changes you didn't intend.
-- Treat a dependency update as a security-relevant change. Check where it came from, why it moved, and what its install scripts do.
+- Run `git diff --staged` before every commit. Check for secrets, `.env` files, and dependency or lockfile changes you didn't intend.
+- **Treat a dependency change as a security-relevant change.** Where it came from, why it moved, what its install scripts do.
+- Small, focused commits — one logical change each. Easier to review, easier to revert.
+
+## Never Rewrite Published History
+
+Do not force-push a shared or protected branch. To undo something already published, revert it with a new commit.
+
+```bash
+git revert <commit-hash>
+```
+
+Force-pushing your own mission branch while you are still working on it is fine. Force-pushing anything others have pulled is not.
 
 ## Merging And Deploying
 
-**Critical**: you may open PRs and resolve conflicts. You **never** perform the final merge. That and deployment belong to the team lead.
+**Critical**: you may open PRs, resolve conflicts, and push. You **never** perform the final merge, and you **never** deploy. Both are the operator's call.
 
-Once the lead has reviewed and approved, they deploy.
-
-## The Sequence
-
-1. Get the release or sub-mission branch name from the team lead.
-2. Check it out.
-3. Pull.
-4. Cut your developer branch.
-5. Code, commit, push.
-6. Open the MR/PR to the target branch and assign the lead.
-7. Assign the Asana mission to the lead with the MR link.
+This is not a convenience. It is a safety property — the operator confirms environment, backup and rollback before anything ships.
 
 ## When To Stop
 
 Report to Bishop when:
 
-- A conflict is genuinely ambiguous — clashing values, changed logic — and needs the team lead's call.
 - A merge breaks tests.
-- You aren't sure which branch to target. Ask the lead.
-- A token or credential may have leaked. Revoke it, rotate it, and report immediately — do not wait.
+- A conflict is genuinely ambiguous and needs a decision rather than a resolution.
+- A token or credential may have leaked. Revoke it, rotate it, and report immediately — do not wait for anything else.
 - A dependency looks wrong: unexpected upgrades, unfamiliar transitive changes, install scripts doing more than they should. Pause and ask for a security review.
+- You aren't sure which branch to target. Confirm against the project's conventions before pushing.

@@ -25,9 +25,11 @@ Agents must adapt tone to the channel — do not use a single voice across all c
 |---------|-------|----------|--------------|
 | — | — | — | — |
 
-## Asana Access
+## Tool Access Details
 
-- **Current access level**: <read-only / read-write>
+For tools where agents need direct access, specify the permissions:
+
+- **<tool name>**: <access level — read-only or read-write>
 - Agents may <what agents may read>
 - Agents may not <what agents cannot do>
 - Access level to be reviewed <when/how>

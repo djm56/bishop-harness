@@ -37,8 +37,8 @@ Every submission gets checked against all of this:
 - Naming and style that fights the surrounding code
 - Duplication
 - Error handling that's missing or partial
-- JSDoc/PHPDoc blocks that are absent or half-written
-- WordPress specifics where relevant: nonce checks, capability checks, sanitization, escaping
+- Docblocks that are absent or half-written in the project's convention
+- Security-sensitive patterns where relevant: CSRF protection, authorization checks, input validation, output encoding
 - **Project directives**: open `.claude/memory/reference/DIRECTIVES.md`, work out which entries the change triggers by their **Applies when**, and test it against each one's **Reviewer check**. Breaking an `active` directive is always **CRITICAL**. If the change triggers **no** active entry, say so explicitly in the review — name the change and state that nothing covered it. That's a coverage gap, never a violation: not CRITICAL, never blocking. It exists so "passed because nothing applied" reads differently from "passed because it complied", and so the gap becomes a candidate directive instead of vanishing into a clean review. That file is read-only to you.
 
 ## How To Report

@@ -46,7 +46,7 @@ Everything lands under `.claude/memory/findings/`, sorted by what kind of insigh
 
 | Kind of insight | Goes to |
 |---|---|
-| Reusable pattern (WordPress practice, theme architecture) | `.claude/memory/findings/PATTERNS.md` |
+| Reusable pattern (architecture, naming convention, test strategy) | `.claude/memory/findings/PATTERNS.md` |
 | A specific observed finding — a change to an agent, skill, or tool | `.claude/memory/findings/FINDINGS.md` |
 | How a particular agent is performing | `.claude/memory/findings/service-records/<agent-name>.md` |
 | Scratch collection while the mission is still running | `.claude/memory/workspace/findings-scratch.md` |

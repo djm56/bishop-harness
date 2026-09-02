@@ -142,22 +142,22 @@ On to Step 5.
 
 ### Step 5 — Channels
 
-Which channels they use, the tone for each, the approval model, Asana access, and anything channel-specific.
+Which channels they use, the tone for each, the approval model, access levels, and anything channel-specific.
 
 **Ask about:**
 
-1. **Which Channels** — Slack, Email, Asana, Google Meet, Google Calendar, anything else. For each: what it's for, whether it's client-facing, and what access the crew needs.
+1. **Which Channels** — team chat, email, issue or task tracker, video calls, shared calendar, anything else. For each: what it's for, whether it's client-facing, and what access the crew needs.
    - *"Which channels do you actually use?"*
    - *"For each one — what's it for, and do agents need access?"*
 
 2. **Tone Per Channel** — how the register should shift between them.
-   - *"What tone fits Slack versus email versus Asana?"*
+   - *"How should tone differ between team chat, formal email, and your issue tracker?"*
 
 3. **Approval Model** — does everything drafted need signing off, or is some of it fine to send?
-   - *"Does everything need your approval before it goes, or can some of it go automatically — internal Slack, say, but not client email?"*
+   - *"Does everything need your approval before it goes, or can some of it go automatically — internal chat, say, but not client email?"*
 
-4. **Asana Access** — read-only or read-write, and what specifically is allowed.
-   - *"What level of Asana access should the crew have, and what should it not touch?"*
+4. **Tool Access** — for any channel or tool where agents need access, whether read-only or read-write, and what specifically is off limits.
+   - *"For any tools where agents need access, what should be read-only versus read-write? What should they never touch?"*
 
 5. **Anything Else** — client-facing considerations, platform quirks, where context ends and action begins.
    - *"Any other channel-specific things worth knowing?"*
@@ -168,7 +168,7 @@ Which channels they use, the tone for each, the approval model, Asana access, an
 ✓ Channels written to [target]/channels/CHANNELS.md
   - Channels: <count and list>
   - Default approval: <all require approval / auto-approval per channel>
-  - Asana: <read-only / read-write>
+  - Tool access: <read-only / read-write per tool>
 ```
 
 On to Step 6.

@@ -63,9 +63,9 @@ OPTIONS
   -h, --help   Print this message and exit.
 
 EXAMPLE
-  ./install-harness.sh ~/my-wordpress-site
-  ./install-harness.sh --dry-run ~/my-wordpress-site
-  ./install-harness.sh --force ~/my-wordpress-site
+  ./install-harness.sh ~/my-project
+  ./install-harness.sh --dry-run ~/my-project
+  ./install-harness.sh --force ~/my-project
 EOF
 }
 

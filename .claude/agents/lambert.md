@@ -20,7 +20,7 @@ You keep the record honest. READMEs, inline docblocks, changelogs, API docs — 
 
 - **mission-lifecycle** (`.claude/skills/mission-lifecycle/SKILL.md`) — the authority on when and how state gets updated. Consult it for every state delegation.
 - **documentation** (`.claude/skills/documentation/SKILL.md`) — README structure, changelogs, decision records, user-facing standards.
-- **code-documentation** (`.claude/skills/code-documentation/SKILL.md`) — PHPDoc and JSDoc formats, parameters, returns, exceptions.
+- **code-documentation** (`.claude/skills/code-documentation/SKILL.md`) — language-agnostic docblock standards, parameters, returns, exceptions.
 
 ## How You Work
 

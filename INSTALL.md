@@ -35,8 +35,7 @@ CLAUDE.md                           # Entry point
   ├── jnr-coding/SKILL.md
   ├── self-improvement/SKILL.md
   ├── snr-architecture/SKILL.md
-  ├── git-workflow/SKILL.md
-  └── wordpress-development/SKILL.md
+  └── git-workflow/SKILL.md
 .claude/templates/                  # Canonical file formats
   ├── state/STATE-FILE-TEMPLATE.md
   ├── mission/MISSION-TEMPLATE.md

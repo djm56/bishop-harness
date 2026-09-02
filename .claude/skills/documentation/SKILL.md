@@ -14,8 +14,8 @@ Brief one-line description.
 
 ## Requirements
 
-- PHP version
-- WordPress version
+- Language and runtime versions
+- Framework versions (where relevant)
 - Dependencies
 
 ## Installation
@@ -24,19 +24,15 @@ Step-by-step install instructions.
 
 ## Usage
 
-How to use the plugin/theme with examples.
+How to use the thing with examples.
 
 ## Configuration
 
 Available settings and their defaults.
 
-## Hooks
+## Public API or Extension Points
 
-### Actions
-- `prefix_action_name` — Description. Params: `$param1`, `$param2`.
-
-### Filters
-- `prefix_filter_name` — Description. Params: `$value`, `$context`.
+List any public API surfaces, registrable hooks, or extension mechanisms a consumer can call into. If the project has none, omit this section.
 
 ## Changelog
 
