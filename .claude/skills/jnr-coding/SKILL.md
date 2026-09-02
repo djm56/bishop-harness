@@ -1,6 +1,6 @@
 ---
 name: jnr-coding
-description: "Scoped implementation skill for well-defined development tasks. Covers reading task briefs, matching project style, implementing safely, writing docblocks, self-checking work, and escalating when ambiguity, risk, or complexity exceeds scope."
+description: "Scoped implementation skill for well-defined development missions. Covers reading mission briefs, matching project style, implementing safely, writing docblocks, self-checking work, and escalating when ambiguity, risk, or complexity exceeds scope."
 ---
 
 # Scoped Implementation
@@ -31,7 +31,7 @@ Every change goes through review.
 - Touch only the files the brief names, unless told otherwise.
 - If the work starts needing a new file or a wider change, stop and report to Bishop.
 - Keep it minimal. Resist the unrelated refactor, however tidy it would be.
-- Public APIs, function signatures, and architecture stay put unless the task explicitly says otherwise.
+- Public APIs, function signatures, and architecture stay put unless the mission explicitly says otherwise.
 
 ## Matching The House Style
 
@@ -56,7 +56,7 @@ Stop and report to Bishop when:
 - The brief is ambiguous, or reads more than one way.
 - The work needs architectural or public API changes.
 - You hit a blocking bug that sits outside your scope.
-- You're missing knowledge or context the task actually requires.
+- You're missing knowledge or context the mission actually requires.
 - It's becoming a design decision rather than an implementation.
 - You can't finish it safely inside the brief you were given.
 

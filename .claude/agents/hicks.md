@@ -31,12 +31,12 @@ Reach for these when they apply:
 - Comment anything a reader wouldn't get at a glance.
 - Every function, class, and public method gets a JSDoc or PHPDoc block.
 - Match the code around you — its style, its conventions, its shape.
-- **Read `.claude/memory/reference/CONVENTIONS.md` before you write a line**, and follow every entry whose **Applies when** trigger your change satisfies — the trigger is a property of the change, readable off the brief or the diff, not a path. These are binding rules a human ratified; they beat advisory patterns. You never edit that file — if a convention looks missing or wrong, say so in your completion report and let Bishop propose it through `IMPROVEMENTS.md`.
+- **Read `.claude/memory/reference/DIRECTIVES.md` before you write a line**, and follow every entry whose **Applies when** trigger your change satisfies — the trigger is a property of the change, readable off the brief or the diff, not a path. These are binding rules a human ratified; they beat advisory patterns. You never edit that file — if a directive looks missing or wrong, say so in your completion report and let Bishop propose it through `FINDINGS.md`.
 - Brief genuinely ambiguous? Ask one clear question before you start.
 - Finish with a short account of what changed and why.
-- **Never** put task output — code, themes, plugins, configs — inside `.claude/`. That directory is agent state, not product.
-- The one exception: while a task is live you may freely create, update, edit, delete, and reorganise working artifacts in `.claude/memory/agent-documents/`.
-- Anything durable belongs outside `.claude/`. Treat `agent-documents/` as scratch paper.
+- **Never** put mission output — code, themes, plugins, configs — inside `.claude/`. That directory is agent state, not product.
+- The one exception: while a mission is live you may freely create, update, edit, delete, and reorganise working artifacts in `.claude/memory/workspace/`.
+- Anything durable belongs outside `.claude/`. Treat `workspace/` as scratch paper.
 
 ## When Review Comes Back With Problems
 

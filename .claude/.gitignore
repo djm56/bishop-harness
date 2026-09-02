@@ -5,7 +5,7 @@ settings.local.json
 .DS_Store
 __MACOSX/
 
-# Transient agent working memory (archived per task; keep the folder and its README)
-memory/agent-documents/*
-!memory/agent-documents/.gitkeep
-!memory/agent-documents/README.md
+# Transient agent working memory (archived per mission; keep the folder and its README)
+memory/workspace/*
+!memory/workspace/.gitkeep
+!memory/workspace/README.md

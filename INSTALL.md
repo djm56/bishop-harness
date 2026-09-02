@@ -2,6 +2,8 @@
 
 The harness is built to travel. This covers getting it into your other repositories and keeping it up to date across all of them.
 
+> "If the portable layer lands incomplete, everything downstream breaks silently. Test it by firing the hooks, not by reading them." — Apone
+
 It comes apart into three layers, and the split is the whole trick: a **portable layer** that's identical everywhere, a **per-repo layer** that has to be generated fresh each time, and a **runtime layer** that's created locally and never committed. Keep those separate and one repo's local state can't leak into another.
 
 ## The Three Layers
@@ -13,7 +15,7 @@ Identical wherever it lands:
 ```
 CLAUDE.md                           # Entry point
 .claude/SOUL.md                     # Bishop's identity and values
-.claude/AGENT-INDEX.md              # Crew index and runtime layout
+.claude/CREW-MANIFEST.md            # Crew index and runtime layout
 .claude/agents/                     # Bishop plus four specialists
   ├── bishop.md                     # Primary agent
   ├── hicks.md
@@ -24,7 +26,7 @@ CLAUDE.md                           # Entry point
   ├── mission.md
   └── about-setup.md
 .claude/skills/                     # Reusable skills
-  ├── task-lifecycle/SKILL.md
+  ├── mission-lifecycle/SKILL.md
   ├── documentation/SKILL.md
   ├── code-documentation/SKILL.md
   ├── code-review/SKILL.md
@@ -35,10 +37,10 @@ CLAUDE.md                           # Entry point
   └── wordpress-development/SKILL.md
 .claude/templates/                  # Canonical file formats
   ├── state/STATE-FILE-TEMPLATE.md
-  ├── task/TASK-TEMPLATE.md
-  ├── task/DONE-REPORT-TEMPLATE.md
-  ├── improvement/IMPROVEMENT-TEMPLATE.md
-  └── reference/CONVENTIONS-TEMPLATE.md
+  ├── mission/MISSION-TEMPLATE.md
+  ├── mission/DEBRIEF-TEMPLATE.md
+  ├── findings/FINDINGS-TEMPLATE.md
+  └── reference/DIRECTIVES-TEMPLATE.md
 .claude/hooks/                      # Enforcement
   ├── completion-gate.sh
   └── state-continuity.sh
@@ -83,19 +85,19 @@ The hook wiring already sits in the portable `settings.json` via `${CLAUDE_PROJE
 
 ```
 .claude/memory/                     # Seeded from memory.zip on first run
-  ├── state/                        # Canonical task state — a closed directory
-  │   ├── ACTIVE-TASK.md
-  │   ├── EVENT-LOG.md
-  │   └── DONE-LOG.md
-  ├── tasks/                        # One folder per task, named task-YYYYMMDD-NN
-  ├── agent-documents/              # Crew scratch space, archived at each new task
+  ├── state/                        # Canonical mission state — a closed directory
+  │   ├── CURRENT-MISSION.md
+  │   ├── FLIGHT-RECORDER.md
+  │   └── MISSION-ARCHIVE.md
+  ├── missions/                     # One folder per mission, named mission-YYYYMMDD-NN
+  ├── workspace/                    # Crew scratch space, archived at each new mission
   │   └── README.md
-  ├── improvements/                 # What the crew learned
-  │   ├── IMPROVEMENTS.md
+  ├── findings/                     # What the crew learned
+  │   ├── FINDINGS.md
   │   ├── PATTERNS.md
-  │   └── agent-notes/
-  └── reference/                    # Binding conventions, seeded empty
-      └── CONVENTIONS.md
+  │   └── service-records/
+  └── reference/                    # Binding directives, seeded empty
+      └── DIRECTIVES.md
 .claude/about/                      # Operator profile — optional, made by /about-setup
   ├── profile/PROFILE.md
   ├── preferences/PREFERENCES.md
@@ -122,7 +124,7 @@ The hook wiring already sits in the portable `settings.json` via `${CLAUDE_PROJE
    unzip -o memory.zip
    ```
 
-   That builds `.claude/memory/` with the state and task folders initialized. It has to exist before any `/mission`.
+   That builds `.claude/memory/` with the state and mission folders initialized. It has to exist before any `/mission`.
 
 3. **Fix the hook permissions.** Copying doesn't reliably preserve the executable bit:
 
@@ -151,9 +153,9 @@ The hook wiring already sits in the portable `settings.json` via `${CLAUDE_PROJE
 
    Fills `.claude/about/` with your profile, preferences, availability, and channels. Skip it and the crew runs on sensible defaults — its absence is never treated as a problem.
 
-6. **Add your conventions** (optional — it ships empty):
+6. **Add your directives** (optional — it ships empty):
 
-   Put binding rules into `.claude/memory/reference/CONVENTIONS.md` using the entry template in `.claude/templates/reference/CONVENTIONS-TEMPLATE.md`. Humans write that file; agents read it before touching code.
+   Put binding rules into `.claude/memory/reference/DIRECTIVES.md` using the entry template in `.claude/templates/reference/DIRECTIVES-TEMPLATE.md`. Humans write that file; agents read it before touching code.
 
 7. **Check it works**:
 
@@ -166,13 +168,13 @@ The hook wiring already sits in the portable `settings.json` via `${CLAUDE_PROJE
    Bishop and the four specialists should be there. If an agent is missing from `/agents` or an agent edit has not taken effect, restart Claude Code — the agent registry is read at session start, while skills and commands update immediately. Then:
 
    ```text
-   /mission Create a test task
+   /mission Create a test mission
    ```
 
    You want to see:
    - `CLAUDE.md` imports resolving with no errors in the system prompt
-   - A `step-sync` row appearing in `.claude/memory/state/EVENT-LOG.md` after an edit — that's the hooks firing
-   - `ACTIVE-TASK.md`, `EVENT-LOG.md`, and a `task-YYYYMMDD-NN` folder all initialized
+   - A `step-sync` row appearing in `.claude/memory/state/FLIGHT-RECORDER.md` after an edit — that's the hooks firing
+   - `CURRENT-MISSION.md`, `FLIGHT-RECORDER.md`, and a `mission-YYYYMMDD-NN` folder all initialized
 
 ## Keeping It Out Of Git
 
@@ -226,13 +228,13 @@ Use `--dry-run` first on any repo you care about. It's the cheapest way to see e
 | Check | How |
 |-------|-----|
 | Portable layer landed | `ls .claude/SOUL.md .claude/agents/ .claude/commands/ .claude/skills/ .claude/templates/ .claude/hooks/` |
-| Memory seeded | `ls .claude/memory/state/ .claude/memory/tasks/` |
+| Memory seeded | `ls .claude/memory/state/ .claude/memory/missions/` |
 | Hooks executable | `ls -l .claude/hooks/*.sh` — all `-rwxr-xr-x` |
 | `settings.local.json` written | Right `additionalDirectories` path, right tool permissions |
 | Untracked | `.claude/` and `CLAUDE.md` in `.git/info/exclude` |
 | Crew loads | `claude` → `/agents` shows Bishop and four specialists |
-| State initializes | `/mission test` creates `ACTIVE-TASK.md` and sets up `EVENT-LOG.md` |
-| Hooks fire | Edit a file, then look for a `step-sync` row in `EVENT-LOG.md` |
+| State initializes | `/mission test` creates `CURRENT-MISSION.md` and sets up `FLIGHT-RECORDER.md` |
+| Hooks fire | Edit a file, then look for a `step-sync` row in `FLIGHT-RECORDER.md` |
 
 ## When Things Don't Work
 
@@ -281,6 +283,6 @@ Still short? Check `.claude/agents/` has all five files, that `CLAUDE.md` is rea
 
 - **Who Bishop is** — `.claude/SOUL.md`
 - **How Bishop operates** — `.claude/agents/bishop.md`: the execution loop, delegation rules, completion gates
-- **The state contract** — `.claude/skills/task-lifecycle/SKILL.md`. It's canonical, and it beats anything that contradicts it
+- **The state contract** — `.claude/skills/mission-lifecycle/SKILL.md`. It's canonical, and it beats anything that contradicts it
 - **File formats** — `.claude/templates/`, the source of truth for every canonical file
 - **What the installer actually does** — `install-harness.sh` itself

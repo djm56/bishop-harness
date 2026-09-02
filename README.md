@@ -2,6 +2,8 @@
 
 A small crew of AI agents with a chain of command, for Claude Code.
 
+> "I can be quick or I can be right. You'll prefer right." — Bishop
+
 One agent is in charge. **Bishop** plans the work, hands each piece to whoever should own it, checks what comes back, and closes the loop — and never writes a line of code. Everything else is done by specialists: a junior who builds, a reviewer who checks, a senior held in reserve, and a writer who keeps the docs and the state files straight.
 
 The point is not the roleplay. It's that work gets planned before it gets built, reviewed before it ships, and written down as it goes — so a session can be interrupted and picked up later without anyone reconstructing what was happening.
@@ -25,26 +27,26 @@ Bishop's character and rules live in [`.claude/SOUL.md`](.claude/SOUL.md). The o
   - [Rebuilding it from memory.zip](#rebuilding-it-from-memoryzip)
   - [What lives where](#what-lives-where)
   - [The three state files](#the-three-state-files)
-  - [Inside a task folder](#inside-a-task-folder)
-  - [Finding your way around mid-task](#finding-your-way-around-mid-task)
+  - [Inside a mission folder](#inside-a-mission-folder)
+  - [Finding your way around mid-mission](#finding-your-way-around-mid-mission)
   - [Current, failed, and finished work](#current-failed-and-finished-work)
   - [What sticks around](#what-sticks-around)
-  - [Project conventions](#project-conventions)
+  - [Project directives](#project-directives)
 - [When Things Don't Work](#when-things-dont-work)
 
 ## The Crew
 
-| Agent | Role | Job |
-|-------|------|-----|
-| **Bishop** (`@bishop`) | commander | In command. Frames the work, delegates it, checks it, closes it. Writes no code. |
-| `@hicks` | junior developer | Builds. Every coding step starts here, whatever the task looks like. |
-| `@apone` | code reviewer | Reads every diff. Reports findings, never rewrites. Runs after each coding step. |
-| `@vasquez` | senior developer | In reserve. Steps in after the junior has completed two fix rounds on the task, or when the same CRITICAL finding persists after two junior fix rounds — whichever comes first. |
-| `@lambert` | doc writer | Documentation, plus every update to the state files. |
+| Agent | Role | Job | Calling Card |
+|-------|------|-----|--------------|
+| **Bishop** (`@bishop`) | commander | In command. Frames the work, delegates it, checks it, closes it. Writes no code. | "I keep the record and the sequence honest." |
+| `@hicks` | junior developer | Builds. Every coding step starts here, whatever the mission looks like. | "Understood. I'll take it as far as it goes, then tell you where it stopped." |
+| `@apone` | code reviewer | Reads every diff. Reports findings, never rewrites. Runs after each coding step. | "I'm not here to make you feel good about it. I'm here to tell you what's wrong with it." |
+| `@vasquez` | senior developer | In reserve. Arrives only by escalation, never in the plan. | "You called me. So it's already gone wrong twice." |
+| `@lambert` | doc writer | Documentation, plus every update to the state files. | "If it isn't written down, it didn't happen." |
 
 Bishop loads automatically from [`CLAUDE.md`](CLAUDE.md) at the repo root. The rest sit in [`.claude/agents/`](.claude/agents/) and get called through the Task tool.
 
-That third row is the one people query. The senior developer is deliberately not available for planning — you can't assign work to it, and neither can Bishop. It only appears when either the junior has completed two fix rounds on the task, or a CRITICAL finding survives two separate junior fix rounds — whichever comes first. That constraint is what stops "this looks hard" turning into an excuse to skip the pipeline.
+The senior developer (`@vasquez`) is the one people query. The senior developer is deliberately not available for planning — you can't assign work to it, and neither can Bishop. It only appears when either the junior has completed two fix rounds on the mission, or a CRITICAL finding survives two separate junior fix rounds — whichever comes first. That constraint is what stops "this looks hard" turning into an excuse to skip the pipeline.
 
 ## Getting Set Up
 
@@ -131,17 +133,17 @@ There's one way in:
 
 Bishop restates the goal, writes a numbered plan, sends every coding step to `@hicks` with an `@apone` step directly behind it, and syncs state to disk after **every** step. Stop halfway through and the next session picks up exactly where you left off.
 
-The rules are written down once, in [`.claude/skills/task-lifecycle/SKILL.md`](.claude/skills/task-lifecycle/SKILL.md). If anything else in the repo contradicts that file, that file wins.
+The rules are written down once, in [`.claude/skills/mission-lifecycle/SKILL.md`](.claude/skills/mission-lifecycle/SKILL.md). If anything else in the repo contradicts that file, that file wins.
 
 Three constraints don't bend:
 
-1. Every coding step goes to `@hicks`, no matter how the task looks.
+1. Every coding step goes to `@hicks`, no matter how the mission looks.
 2. Every coding step is followed immediately by `@apone`.
 3. `@vasquez` never appears in an initial plan. It arrives by escalation or not at all.
 
 ## Memory
 
-`.claude/memory/` is what makes a task resumable. `CLAUDE.md` is the entry point; it pulls in `.claude/SOUL.md`, `.claude/AGENT-INDEX.md`, and `.claude/agents/bishop.md`. Two hooks in `.claude/hooks/` (`completion-gate.sh`, `state-continuity.sh`) enforce the continuity rules mechanically, so it isn't purely a matter of the model remembering to.
+`.claude/memory/` is what makes a mission resumable. `CLAUDE.md` is the entry point; it pulls in `.claude/SOUL.md`, `.claude/CREW-MANIFEST.md`, and `.claude/agents/bishop.md`. Two hooks in `.claude/hooks/` (`completion-gate.sh`, `state-continuity.sh`) enforce the continuity rules mechanically, so it isn't purely a matter of the model remembering to.
 
 ### Rebuilding it from memory.zip
 
@@ -156,83 +158,83 @@ unzip -o memory.zip
 
 | Folder | What it's for | How long it lasts | Contents |
 |--------|---------------|-------------------|----------|
-| `.claude/memory/state/` | The canonical state used to resume exactly where work stopped | Permanent | `ACTIVE-TASK.md`, `EVENT-LOG.md`, `DONE-LOG.md` |
-| `.claude/memory/tasks/` | One folder per task, named `task-YYYYMMDD-NN` | Permanent, though Bishop prunes stale ones | `task-[id]/CONTEXT.md`, `PROGRESS.md`, `DONE-REPORT.md` |
-| `.claude/memory/agent-documents/` | Scratch space the crew uses mid-task | Temporary — survives across sessions while a task is unfinished, archived when a new one starts | drafts, review notes, `improvement-scratch.md` |
-| `.claude/memory/improvements/` | What the crew learned, and patterns worth reusing | Permanent | `IMPROVEMENTS.md`, `PATTERNS.md`, `agent-notes/` |
-| `.claude/memory/reference/` | Binding conventions, ratified by a human | Permanent | `CONVENTIONS.md` |
+| `.claude/memory/state/` | The canonical state used to resume exactly where work stopped | Permanent | `CURRENT-MISSION.md`, `FLIGHT-RECORDER.md`, `MISSION-ARCHIVE.md` |
+| `.claude/memory/missions/` | One folder per mission, named `mission-YYYYMMDD-NN` | Permanent, though Bishop prunes stale ones | `mission-[id]/BRIEF.md`, `PROGRESS.md`, `DEBRIEF.md` |
+| `.claude/memory/workspace/` | Scratch space the crew uses mid-mission | Temporary — survives across sessions while a mission is unfinished, archived when a new one starts | drafts, review notes, `findings-scratch.md` |
+| `.claude/memory/findings/` | What the crew learned, and patterns worth reusing | Permanent | `FINDINGS.md`, `PATTERNS.md`, `service-records/` |
+| `.claude/memory/reference/` | Binding directives, ratified by a human | Permanent | `DIRECTIVES.md` |
 
-`state/` is a **closed directory**: those three canonical files plus machine-written state from a registered hook, and nothing else. Checkpoints, handoff notes, and drafts belong in `agent-documents/`.
+`state/` is a **closed directory**: those three canonical files plus machine-written state from a registered hook, and nothing else. Checkpoints, handoff notes, and drafts belong in `workspace/`.
 
 ### The three state files
 
-- `ACTIVE-TASK.md` — the single answer to "what's happening right now": task id, status (`not-started` / `in-progress` / `blocked` / `complete`), next action, blockers. Each sync rewrites what has stopped being true rather than carrying it forward.
-- `EVENT-LOG.md` — an append-only journal, one row per sync. This is the record that matters for continuity. Timestamps are `YYYY-MM-DD HH:MM UTC`, never invented, and every appended row is read back and verified before the sync is reported done.
-- `DONE-LOG.md` — append-only history of finished work: `Task ID | Completed | Outcome | Summary`.
+- `CURRENT-MISSION.md` — the single answer to "what's happening right now": mission id, status (`not-started` / `in-progress` / `blocked` / `complete`), next action, blockers. Each sync rewrites what has stopped being true rather than carrying it forward.
+- `FLIGHT-RECORDER.md` — an append-only journal, one row per sync. This is the record that matters for continuity. Timestamps are `YYYY-MM-DD HH:MM UTC`, never invented, and every appended row is read back and verified before the sync is reported done.
+- `MISSION-ARCHIVE.md` — append-only history of finished work: `Mission ID | Completed | Outcome | Summary`.
 
-### Task IDs
+### Mission IDs
 
-Every task gets `task-YYYYMMDD-NN` — the UTC creation date, then a counter that resets each day and starts at `01`. So `task-20260711-01`, then `task-20260711-02`, then `task-20260712-01` the next day.
+Every mission gets `mission-YYYYMMDD-NN` — the UTC creation date, then a counter that resets each day and starts at `01`. So `mission-20260711-01`, then `mission-20260711-02`, then `mission-20260712-01` the next day.
 
-Bishop derives it before anything is delegated, taking the highest `NN` already used for that date across **both** the existing `tasks/task-<date>-*` folders and the rows mentioning them in `EVENT-LOG.md` and `DONE-LOG.md`. Folders get pruned; the logs don't — checking both is what stops a retired ID coming back around and making the audit trail ambiguous.
+Bishop derives it before anything is delegated, taking the highest `NN` already used for that date across **both** the existing `missions/mission-<date>-*` folders and the rows mentioning them in `FLIGHT-RECORDER.md` and `MISSION-ARCHIVE.md`. Folders get pruned; the logs don't — checking both is what stops a retired ID coming back around and making the audit trail ambiguous.
 
-### Inside a task folder
+### Inside a mission folder
 
-Every `.claude/memory/tasks/task-[id]/` holds:
+Every `.claude/memory/missions/mission-[id]/` holds:
 
-- `CONTEXT.md` — the goal, the acceptance criteria, the relevant files, and any notes. Every path in `Key Files` is confirmed as it's written, or marked `— to be created at step N`.
+- `BRIEF.md` — the goal, the acceptance criteria, the relevant files, and any notes. Every path in `Key Files` is confirmed as it's written, or marked `— to be created at step N`.
 - `PROGRESS.md` — step by step status per agent, in a `Step | Phase | Agent | Status | Notes` table: `pending` → `in-progress` → `done` / `failed`. A step becomes `in-progress` when its brief is delegated, not afterwards.
-- `DONE-REPORT.md` — written at the end: what shipped, what was assumed wrongly, what the crew got wrong and how it was corrected.
+- `DEBRIEF.md` — written at the end: what shipped, what was assumed wrongly, what the crew got wrong and how it was corrected.
 
-### Finding your way around mid-task
+### Finding your way around mid-mission
 
 ```bash
 # What's happening right now
-cat .claude/memory/state/ACTIVE-TASK.md
+cat .claude/memory/state/CURRENT-MISSION.md
 
 # The journal
-cat .claude/memory/state/EVENT-LOG.md
+cat .claude/memory/state/FLIGHT-RECORDER.md
 
-# The active task itself
-ls .claude/memory/tasks
-cat .claude/memory/tasks/task-20260711-01/CONTEXT.md
-cat .claude/memory/tasks/task-20260711-01/PROGRESS.md
+# The active mission itself
+ls .claude/memory/missions
+cat .claude/memory/missions/mission-20260711-01/BRIEF.md
+cat .claude/memory/missions/mission-20260711-01/PROGRESS.md
 
 # If it's in-progress or blocked, look at the scratch space before anything else
-ls .claude/memory/agent-documents
+ls .claude/memory/workspace
 
 # What's been finished
-cat .claude/memory/state/DONE-LOG.md
+cat .claude/memory/state/MISSION-ARCHIVE.md
 ```
 
 ### Current, failed, and finished work
 
-- **Current** — `ACTIVE-TASK.md`, the `Task ID` and `Status` fields.
-- **Blocked or failed** — `ACTIVE-TASK.md` showing `blocked`, with the blocker written out, plus the failed rows in that task's `PROGRESS.md`.
-- **Finished** — the rows in `DONE-LOG.md`, each with an `Outcome` of `done` or `failed`.
+- **Current** — `CURRENT-MISSION.md`, the `Mission ID` and `Status` fields.
+- **Blocked or failed** — `CURRENT-MISSION.md` showing `blocked`, with the blocker written out, plus the failed rows in that mission's `PROGRESS.md`.
+- **Finished** — the rows in `MISSION-ARCHIVE.md`, each with an `Outcome` of `done` or `failed`.
 
 ### What sticks around
 
-- `state/` and `tasks/` are the durable trail. That's the audit record.
-- `agent-documents/` is scratch by design, but it survives across sessions while a task is unfinished — and when a new task starts it is **archived into `archive-task-[id]/`, never deleted**. A scratch file is sometimes the only copy of a deliverable that never shipped.
-- `improvements/` is long-term. Don't treat it as somewhere to dump notes.
+- `state/` and `missions/` are the durable trail. That's the audit record.
+- `workspace/` is scratch by design, but it survives across sessions while a mission is unfinished — and when a new mission starts it is **archived into `archive-mission-[id]/`, never deleted**. A scratch file is sometimes the only copy of a deliverable that never shipped.
+- `findings/` is long-term. Don't treat it as somewhere to dump notes.
 
-### Project conventions
+### Project directives
 
-`.claude/memory/reference/CONVENTIONS.md` is the **binding, human-ratified** set of coding rules for the project. Every developer and reviewer has to comply with it, and it deliberately sits outside the crew's own learning loop.
+`.claude/memory/reference/DIRECTIVES.md` is the **binding, human-ratified** set of coding rules for the project. Every developer and reviewer has to comply with it, and it deliberately sits outside the crew's own learning loop.
 
 | File | Who writes it | How much weight it carries |
 |------|---------------|----------------------------|
-| `reference/CONVENTIONS.md` | Humans only — agents can read it, nothing more | **Binding.** Agents comply. |
-| `improvements/PATTERNS.md` | Agents, from observation | Advisory |
-| `improvements/IMPROVEMENTS.md` | Agents propose, a human approves | Suggestions |
+| `reference/DIRECTIVES.md` | Humans only — agents can read it, nothing more | **Binding.** Agents comply. |
+| `findings/PATTERNS.md` | Agents, from observation | Advisory |
+| `findings/FINDINGS.md` | Agents propose, a human approves | Suggestions |
 
-Where two disagree, `CONVENTIONS.md` wins.
+Where two disagree, `DIRECTIVES.md` wins.
 
-- **Adding a rule** is a human job. Copy the entry template from [`.claude/templates/reference/CONVENTIONS-TEMPLATE.md`](.claude/templates/reference/CONVENTIONS-TEMPLATE.md), fill in every field, take the next `CONV-NNN`, add an index row, set `Status: active`.
+- **Adding a rule** is a human job. Copy the entry template from [`.claude/templates/reference/DIRECTIVES-TEMPLATE.md`](.claude/templates/reference/DIRECTIVES-TEMPLATE.md), fill in every field, take the next `DIR-NNN`, add an index row, set `Status: active`.
 - **Agents read it and comply.** Developers read every entry whose **Applies when** trigger their change satisfies — a property of the change, readable off the brief or the diff, not a path — before writing anything. The reviewer tests the change against each triggered entry's `Reviewer check`; breaking an `active` rule is always a CRITICAL finding. Where a change triggers no entry at all, the reviewer says so explicitly: that's a coverage gap worth a proposal, not a violation.
-- **Agents never edit it.** A missing or wrong convention gets proposed through `IMPROVEMENTS.md` as `proposed`, and a human ratifies it across. That's the only route in.
-- **Retire, don't delete.** Withdrawing a rule means setting `Status: deprecated`. The `CONV-NNN` ids are permanent and never reused.
+- **Agents never edit it.** A missing or wrong directive gets proposed through `FINDINGS.md` as `proposed`, and a human ratifies it across. That's the only route in.
+- **Retire, don't delete.** Withdrawing a rule means setting `Status: deprecated`. The `DIR-NNN` ids are permanent and never reused.
 
 It ships empty, seeded from `memory.zip`. Fill it in as conventions actually emerge — an empty file is better than one full of rules nobody agreed to.
 
@@ -277,3 +279,9 @@ If the restart does not resolve it:
 
 1. Check `.claude/agents/` exists and has all five files in it.
 2. Run `claude doctor`.
+
+---
+
+## Attribution
+
+Bishop, Hicks, Apone, Vasquez and Lambert are characters from the *Alien* films, the property of 20th Century Studios. This is unofficial fan work with no affiliation with or endorsement by the rights holders. The names are used for flavour only; all trademarks and copyrights remain with their owners.

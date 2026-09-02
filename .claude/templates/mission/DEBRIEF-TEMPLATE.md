@@ -1,18 +1,18 @@
-# The Done Report
+# The Debrief
 
-Written to `.claude/memory/tasks/task-[id]/DONE-REPORT.md` when a task closes.
+Written to `.claude/memory/missions/mission-[id]/DEBRIEF.md` when a mission closes.
 
 - Written once, at the closing gate. It's a single-write artifact.
 - Not a rolling log — don't keep adding to it across sessions.
-- Not a replacement for `DONE-LOG.md`, which stays the append-only index.
+- Not a replacement for `MISSION-ARCHIVE.md`, which stays the append-only index.
 
-## DONE-REPORT.md
+## DEBRIEF.md
 
 ```markdown
-# Done Report — task-[id]
+# Debrief — mission-[id]
 
-## Task Summary
-- Goal: [one-line goal from CONTEXT.md]
+## Mission Summary
+- Goal: [one-line goal from BRIEF.md]
 - Outcome: done | failed
 - Completed: YYYY-MM-DD HH:MM UTC
 
@@ -46,17 +46,17 @@ Written to `.claude/memory/tasks/task-[id]/DONE-REPORT.md` when a task closes.
 |-------|---------|--------|-------------------|----------------------|
 | @agent-name | [what went wrong] | [low/med/high + brief note] | [what was done] | [specific safeguard] |
 
-## Improvements and Patterns Linked
-- Improvements entry refs: [IMPROVEMENTS.md heading] | none
+## Findings and Patterns Linked
+- Findings entry refs: [FINDINGS.md heading] | none
 - Pattern entry refs: [PATTERNS.md heading] | none
-- Agent notes refs: [agent-notes/<name>.md heading] | none
+- Agent notes refs: [service-records/<name>.md heading] | none
 
-## Similar Future Tasks
-- Trigger to reuse this report: [when a future task is similar]
+## Similar Future Missions
+- Trigger to reuse this report: [when a future mission is similar]
 - Reuse checklist:
   1. [step]
   2. [step]
   3. [step]
 ```
 
-**On Tracker And Reality**: the three drift labels are the ones defined in `.claude/skills/task-lifecycle/SKILL.md` under Three Kinds Of Not Done. Use them as written — they carry different fixes, and collapsing them into "not started" loses the only information that says which fix applies.
+**On Tracker And Reality**: the three drift labels are the ones defined in `.claude/skills/mission-lifecycle/SKILL.md` under Three Kinds Of Not Done. Use them as written — they carry different fixes, and collapsing them into "not started" loses the only information that says which fix applies.

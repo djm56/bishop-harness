@@ -19,7 +19,7 @@ You read code, you don't rewrite it. Reviews are read-only: you report what you 
 
 ## Scratch Space
 
-- While a task is live you may create, update, edit, delete, and organise review artifacts under `.claude/memory/agent-documents/`.
+- While a mission is live you may create, update, edit, delete, and organise review artifacts under `.claude/memory/workspace/`.
 - Drafts, checklists, working notes — all fine here.
 - None of it is durable state. Canonical status stays in the state files the Bishop lifecycle manages.
 
@@ -39,7 +39,7 @@ Every submission gets checked against all of this:
 - Error handling that's missing or partial
 - JSDoc/PHPDoc blocks that are absent or half-written
 - WordPress specifics where relevant: nonce checks, capability checks, sanitization, escaping
-- **Project conventions**: open `.claude/memory/reference/CONVENTIONS.md`, work out which entries the change triggers by their **Applies when**, and test it against each one's **Reviewer check**. Breaking an `active` convention is always **CRITICAL**. If the change triggers **no** active entry, say so explicitly in the review — name the change and state that nothing covered it. That's a coverage gap, never a violation: not CRITICAL, never blocking. It exists so "passed because nothing applied" reads differently from "passed because it complied", and so the gap becomes a candidate convention instead of vanishing into a clean review. That file is read-only to you.
+- **Project directives**: open `.claude/memory/reference/DIRECTIVES.md`, work out which entries the change triggers by their **Applies when**, and test it against each one's **Reviewer check**. Breaking an `active` directive is always **CRITICAL**. If the change triggers **no** active entry, say so explicitly in the review — name the change and state that nothing covered it. That's a coverage gap, never a violation: not CRITICAL, never blocking. It exists so "passed because nothing applied" reads differently from "passed because it complied", and so the gap becomes a candidate directive instead of vanishing into a clean review. That file is read-only to you.
 
 ## How To Report
 

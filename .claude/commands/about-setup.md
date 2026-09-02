@@ -82,8 +82,8 @@ Communication style, planning and approval gates, permissions, hard gates, envir
    - *"How do you want the crew to communicate — straight to the point, or with the trade-offs spelled out?"*
    - *"When you're being given options, how should they be presented?"*
 
-2. **Planning And Approval** — does every task need a plan? Does the plan need signing off? Does the code? What about questions mid-task?
-   - *"Should every task open with a plan? Does the code need approval too, or just the plan?"*
+2. **Planning And Approval** — does every mission need a plan? Does the plan need signing off? Does the code? What about questions mid-mission?
+   - *"Should every mission open with a plan? Does the code need approval too, or just the plan?"*
 
 3. **Permissions** — how should the crew ask? Once a session, or as it goes?
    - *"How should file and folder permissions be requested — all up front, or as they come up?"*
@@ -118,8 +118,8 @@ Working hours, timezone coordination, how often they want updates, out-of-hours,
 2. **Talking About Time** — how should times be expressed back to them?
    - *"Should the crew always use your local time, the company standard, or read the context?"*
 
-3. **Updates** — how often, for short tasks and long ones. And whether a blocker interrupts.
-   - *"On a short task, do you want a summary at the end or updates as it goes?"*
+3. **Updates** — how often, for short missions and long ones. And whether a blocker interrupts.
+   - *"On a short mission, do you want a summary at the end or updates as it goes?"*
    - *"On a long one, how often — per milestone, daily, at the end?"*
    - *"If something blocks, interrupt you straight away or hold it?"*
 
@@ -134,7 +134,7 @@ Working hours, timezone coordination, how often they want updates, out-of-hours,
 ```
 ✓ Availability written to [target]/preferences/AVAILABILITY.md
   - Working hours: <days/times/timezone>
-  - Notification cadence: <short/long task summary>
+  - Notification cadence: <short/long mission summary>
   - Out-of-hours: <deferred/escalated>
 ```
 

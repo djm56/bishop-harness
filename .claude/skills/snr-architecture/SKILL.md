@@ -1,6 +1,6 @@
 ---
 name: snr-architecture
-description: "Advanced development skill for complex tasks. Covers architecture, system design, refactoring strategy, dependency management, technical debt assessment, edge-case thinking, trade-off analysis, and guidance when a task requires deeper judgment."
+description: "Advanced development skill for complex missions. Covers architecture, system design, refactoring strategy, dependency management, technical debt assessment, edge-case thinking, trade-off analysis, and guidance when a mission requires deeper judgment."
 ---
 
 # Architecture And Judgement
@@ -11,7 +11,7 @@ Complex or high-impact work. It's about seeing past the immediate change to the 
 
 ## What To Assess
 
-Looking at a task or a design, work through:
+Looking at a mission or a design, work through:
 
 1. Separation of concerns.
 2. Coupling and cohesion.
@@ -71,7 +71,7 @@ For each item, write down:
 
 ## When It's Architect-Level
 
-Treat the task as yours when it touches:
+Treat the mission as yours when it touches:
 
 - Public API changes.
 - Data model changes.

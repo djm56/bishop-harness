@@ -4,8 +4,8 @@
 #
 # The one place the harness genuinely says no.
 #
-# Takes hook JSON on stdin. When a Write or Edit to ACTIVE-TASK.md tries to set Status
-# to "complete", this refuses unless that task already has a DONE-REPORT.md on disk.
+# Takes hook JSON on stdin. When a Write or Edit to CURRENT-MISSION.md tries to set Status
+# to "complete", this refuses unless that mission already has a DEBRIEF.md on disk.
 #
 # It fails open on purpose: no jq, unparseable JSON, anything unexpected — exit 0 and
 # let the work through. A gate that jams the whole loop is worse than one that misses.
@@ -36,9 +36,9 @@ if [ -z "$FILE_PATH" ]; then
   exit 0
 fi
 
-# Only ACTIVE-TASK.md is our business.
+# Only CURRENT-MISSION.md is our business.
 FILE_BASENAME="$(basename "$FILE_PATH")"
-if [ "$FILE_BASENAME" != "ACTIVE-TASK.md" ]; then
+if [ "$FILE_BASENAME" != "CURRENT-MISSION.md" ]; then
   # Something else entirely. Let it through.
   exit 0
 fi
@@ -58,23 +58,23 @@ if ! printf '%s' "$CONTENT" | grep -iqE 'Status[[:space:]]*[|:][[:space:]]*compl
   exit 0
 fi
 
-# Pull the Task ID out of the content. Find any line mentioning "Task ID" — field list
-# or table row, the separator doesn't matter — then take the first task-<id> token off
-# it. Matches task-YYYYMMDD-NN and anything else of that shape.
-TASK_ID="$(printf '%s' "$CONTENT" | grep -iE 'Task[[:space:]]*ID' | grep -oE 'task-[0-9A-Za-z_-]+' | head -1)"
-if [ -z "$TASK_ID" ]; then
-  echo "[completion-gate.sh] WARNING: Could not parse Task ID from ACTIVE-TASK.md content. Skipping (fail-open)." >&2
+# Pull the Mission ID out of the content. Find any line mentioning "Mission ID" — field list
+# or table row, the separator doesn't matter — then take the first mission-<id> token off
+# it. Matches mission-YYYYMMDD-NN and anything else of that shape.
+MISSION_ID="$(printf '%s' "$CONTENT" | grep -iE 'Mission[[:space:]]*ID' | grep -oE 'mission-[0-9A-Za-z_-]+' | head -1)"
+if [ -z "$MISSION_ID" ]; then
+  echo "[completion-gate.sh] WARNING: Could not parse Mission ID from CURRENT-MISSION.md content. Skipping (fail-open)." >&2
   exit 0
 fi
 
 # Does the report exist?
-DONE_REPORT_PATH="$PROJECT_ROOT/.claude/memory/tasks/$TASK_ID/DONE-REPORT.md"
-if [ -f "$DONE_REPORT_PATH" ]; then
-  # It does. The task may close.
+DEBRIEF_PATH="$PROJECT_ROOT/.claude/memory/missions/$MISSION_ID/DEBRIEF.md"
+if [ -f "$DEBRIEF_PATH" ]; then
+  # It does. The mission may close.
   exit 0
 else
   # It doesn't. Stop here.
-  REASON="Completion gate: DONE-REPORT.md missing for $TASK_ID. Create it before marking the task complete."
+  REASON="Completion gate: DEBRIEF.md missing for $MISSION_ID. Create it before marking the mission complete."
 
   # Escape backslashes and quotes so the reason can't break the JSON we emit.
   REASON_ESCAPED="$(printf '%s' "$REASON" | sed 's/\\/\\\\/g; s/"/\\"/g')"

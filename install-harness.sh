@@ -22,7 +22,7 @@
 #   • Works out SOURCE from wherever this script lives, following symlinks.
 #   • Checks TARGET exists and is actually a directory.
 #   • Copies the portable pieces from SOURCE/.claude into TARGET/.claude:
-#       IN:  CLAUDE.md, SOUL.md, AGENT-INDEX.md, agents/, commands/, skills/,
+#       IN:  CLAUDE.md, SOUL.md, CREW-MANIFEST.md, agents/, commands/, skills/,
 #            templates/, hooks/, settings.json, memory.zip
 #       OUT: memory/, about/, settings.local.json, .deployignore, .git/,
 #            README.md, install-harness.sh
@@ -160,7 +160,7 @@ copy_portable_layer() {
       "rsync"
       "-a"
       "--include=SOUL.md"
-      "--include=AGENT-INDEX.md"
+      "--include=CREW-MANIFEST.md"
       "--include=agents/"
       "--include=agents/**"
       "--include=commands/"
@@ -189,7 +189,7 @@ copy_portable_layer() {
     # Fallback: cp -r for individual items (ensuring no double-nesting on directories)
     local items=(
       "SOUL.md"
-      "AGENT-INDEX.md"
+      "CREW-MANIFEST.md"
       "agents"
       "commands"
       "skills"
@@ -548,7 +548,7 @@ print_final_report() {
   echo ""
   echo "NEXT STEPS"
   echo "  1. (Optional) Run /about-setup in Claude Code to create operator profile"
-  echo "  2. Populate .claude/memory/reference/CONVENTIONS.md with project rules"
+  echo "  2. Populate .claude/memory/reference/DIRECTIVES.md with project rules"
   echo "  3. Open a Claude Code session in the target repository"
   echo "  4. Confirm that hooks fire and /mission initializes state correctly"
   echo ""

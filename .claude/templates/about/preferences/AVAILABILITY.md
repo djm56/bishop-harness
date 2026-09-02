@@ -14,25 +14,25 @@
 - <description of how coordination time is used in communications>
 - <rules for when agents should use which timezone>
 
-## Task Notification Preferences
+## Mission Notification Preferences
 
-| Task Size | Update Cadence |
+| Mission Size | Update Cadence |
 |-----------|----------------|
-| Short task | <notification approach> |
-| Long task | <notification approach> |
-| Any task | <interrupt behavior for blockers> |
+| Short mission | <notification approach> |
+| Long mission | <notification approach> |
+| Any mission | <interrupt behavior for blockers> |
 
 ## Out of Hours Handling
 
 - <description of out-of-hours availability>
-- When a message or task arrives outside working hours, agents must:
+- When a message or mission arrives outside working hours, agents must:
   1. <first action>
   2. <second action>
   3. <third action if applicable>
 
-## Urgent Task Transfer
+## Urgent Mission Transfer
 
-- <description of urgent task escalation>
+- <description of urgent mission escalation>
 - <transfer process and context requirements>
 
 ## Transfer Contacts

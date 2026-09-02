@@ -32,15 +32,15 @@ Running on Claude Code, the pieces sit like this:
 
 ## Getting Work Started
 
-One way in. Full usage is in the [README](../README.md#running-a-task).
+One way in. Full usage is in the [README](../README.md#running-a-mission).
 
-| Command | Driver | Plan | Review | Task state |
+| Command | Driver | Plan | Review | Mission state |
 |---------|--------|------|--------|------------|
 | `/mission` | `@bishop` (primary) | Yes | Yes | **Full** — state files plus per-step sync |
 
 `/mission` runs the memory and state-sync lifecycle described below, in full.
 
-## The Shape Of A Task
+## The Shape Of A Mission
 
 1. Bishop opens with a numbered plan.
 2. Bishop writes an explicit brief for every step in it.
@@ -51,24 +51,24 @@ These decide who gets coding work while the plan is being written:
 
 1. **Every coding step goes to @hicks.** All of them. Complexity, architecture, and performance change nothing.
 2. **@apone comes straight after every coding step.** No step that produces code exists without a review step as the very next numbered step.
-3. **@vasquez only arrives by escalation.** Never in the initial plan. Bishop escalates when either trigger fires, whichever comes first: the same CRITICAL finding is still open after two junior fix rounds, confirmed by two separate @apone reviews; or @hicks has completed two fix rounds on this task, whatever the severity of the findings.
+3. **@vasquez only arrives by escalation.** Never in the initial plan. Bishop escalates when either trigger fires, whichever comes first: the same CRITICAL finding is still open after two junior fix rounds, confirmed by two separate @apone reviews; or @hicks has completed two fix rounds on this mission, whatever the severity of the findings.
 
 **Break any of these** — @vasquez in an initial step, or a coding step with no review behind it — and the plan is INVALID. Rewrite it before execution starts.
 
 ## The Scratch Workspace
 
-- While a task is live, any agent may create, update, edit, delete, and reorganise files under `.claude/memory/agent-documents/`.
+- While a mission is live, any agent may create, update, edit, delete, and reorganise files under `.claude/memory/workspace/`.
 - Structure it however the work needs.
-- It's scratch, not record — no substitute for the canonical state files in `.claude/memory/state/` or the task files in `.claude/memory/tasks/`.
-- For unfinished tasks it survives across sessions, carrying resumable context until the task closes or is deliberately replaced.
-- It gets cleared only on confirmed new-task initialization, and clearing means **archiving**: `.gitkeep` and `README.md` stay, everything else moves into `archive-task-[id]/`, and `improvement-scratch.md` is recreated fresh. Nothing here is deleted.
-- `improvement-scratch.md` lives here — the running collection of IMPROVEMENT-NOTE findings that the closing learning pass consolidates.
+- It's scratch, not record — no substitute for the canonical state files in `.claude/memory/state/` or the mission files in `.claude/memory/missions/`.
+- For unfinished missions it survives across sessions, carrying resumable context until the mission closes or is deliberately replaced.
+- It gets cleared only on confirmed new-mission initialization, and clearing means **archiving**: `.gitkeep` and `README.md` stay, everything else moves into `archive-mission-[id]/`, and `findings-scratch.md` is recreated fresh. Nothing here is deleted.
+- `findings-scratch.md` lives here — the running collection of IMPROVEMENT-NOTE findings that the closing learning pass consolidates.
 
 ## Where Memory Lives
 
-- `memory/state/` — `ACTIVE-TASK.md`, `EVENT-LOG.md`, `DONE-LOG.md`. A closed directory: those three plus machine-written state from a registered hook, nothing else.
-- `memory/tasks/task-YYYYMMDD-NN/` — `CONTEXT.md`, `PROGRESS.md`, and `DONE-REPORT.md` at the close. Task IDs carry the UTC creation date and a counter that resets daily.
-- `memory/improvements/` — `IMPROVEMENTS.md` (findings ledger), `PATTERNS.md` (advisory), `agent-notes/<name>.md`.
-- `memory/reference/CONVENTIONS.md` — binding, human-ratified, and never written by an agent.
+- `memory/state/` — `CURRENT-MISSION.md`, `FLIGHT-RECORDER.md`, `MISSION-ARCHIVE.md`. A closed directory: those three plus machine-written state from a registered hook, nothing else.
+- `memory/missions/mission-YYYYMMDD-NN/` — `BRIEF.md`, `PROGRESS.md`, and `DEBRIEF.md` at the close. Mission IDs carry the UTC creation date and a counter that resets daily.
+- `memory/findings/` — `FINDINGS.md` (findings ledger), `PATTERNS.md` (advisory), `service-records/<name>.md`.
+- `memory/reference/DIRECTIVES.md` — binding, human-ratified, and never written by an agent.
 
-The whole tree is seeded from `.claude/memory.zip`. Full rules are in [skills/task-lifecycle/SKILL.md](./skills/task-lifecycle/SKILL.md).
+The whole tree is seeded from `.claude/memory.zip`. Full rules are in [skills/mission-lifecycle/SKILL.md](./skills/mission-lifecycle/SKILL.md).

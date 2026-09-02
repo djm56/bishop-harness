@@ -15,7 +15,7 @@
 
 - <describe approach to planning and approval gates>
 - <describe what requires approval vs. what does not>
-- <describe how to handle mid-task questions>
+- <describe how to handle mid-mission questions>
 
 ## Permissions
 
