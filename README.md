@@ -2,7 +2,7 @@
 
 A small crew of AI agents with a chain of command, for Claude Code.
 
-> "I can be quick or I can be right. You'll prefer right." — Bishop
+> "Is this gonna be a stand-up fight, sir, or another bug hunt?" — Private Hudson, *Aliens*
 
 One agent is in charge. **Bishop** plans the work, hands each piece to whoever should own it, checks what comes back, and closes the loop — and never writes a line of code. Everything else is done by specialists: a junior who builds, a reviewer who checks, a senior held in reserve, and a writer who keeps the docs and the state files straight.
 
@@ -47,6 +47,15 @@ Bishop's character and rules live in [`.claude/SOUL.md`](.claude/SOUL.md). The o
 Bishop loads automatically from [`CLAUDE.md`](CLAUDE.md) at the repo root. The rest sit in [`.claude/agents/`](.claude/agents/) and get called through the Task tool.
 
 The senior developer (`@vasquez`) is the one people query. The senior developer is deliberately not available for planning — you can't assign work to it, and neither can Bishop. It only appears when either the junior has completed two fix rounds on the mission, or a CRITICAL finding survives two separate junior fix rounds — whichever comes first. That constraint is what stops "this looks hard" turning into an excuse to skip the pipeline.
+
+## Aboard the Sulaco
+
+The crew are drawn from the *Sulaco*, the ship from *Aliens* — Bishop its synthetic executive officer, Apone its sergeant, Hicks its corporal, and Vasquez its smartgunner. Lambert is the exception, arriving from the *Nostromo* of the earlier film *Alien*: she brings the discipline of keeping the ship's log and knowing exactly where you are, which is what the doc writer does — carries the record forward, keeps the continuity honest.
+
+- **Apone** — "Look into my eye." — *Aliens*
+- **Hicks** — "Stay frosty." — *Aliens*
+- **Vasquez** — "Let's rock." — *Aliens*
+- **Bishop** — "I may be synthetic, but I'm not stupid." — *Aliens*
 
 ## Getting Set Up
 
@@ -282,6 +291,10 @@ If the restart does not resolve it:
 
 ---
 
+## A Note On The Crew
+
+This is a crew assembled across the franchise rather than any one ship's roster — affectionate fan work, and deliberately not strict canon. Nobody in the films served together in these combinations, and the roles here are the harness's, not the films'. A sibling project by the same operator uses MU/TH/UR, the *Nostromo*'s computer, as its memory system — the same franchise affection running across repositories. It is a bit of fun on top of a serious tool.
+
 ## Attribution
 
-Bishop, Hicks, Apone, Vasquez and Lambert are characters from the *Alien* films, the property of 20th Century Studios. This is unofficial fan work with no affiliation with or endorsement by the rights holders. The names are used for flavour only; all trademarks and copyrights remain with their owners.
+Bishop, Hicks, Apone, Vasquez and Lambert are characters from the *Alien* films, the property of 20th Century Studios. This document contains short quotations from those films, used for identification and flavour. This is unofficial fan work with no affiliation with or endorsement by the rights holders. All trademarks and copyrights remain with their owners.

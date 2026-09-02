@@ -2,9 +2,11 @@
 
 The harness is built to travel. This covers getting it into your other repositories and keeping it up to date across all of them.
 
-> "If the portable layer lands incomplete, everything downstream breaks silently. Test it by firing the hooks, not by reading them." — Apone
+> "Stay frosty." — Corporal Hicks, *Aliens*
 
 It comes apart into three layers, and the split is the whole trick: a **portable layer** that's identical everywhere, a **per-repo layer** that has to be generated fresh each time, and a **runtime layer** that's created locally and never committed. Keep those separate and one repo's local state can't leak into another.
+
+A critical point: if the portable layer lands incomplete, everything downstream breaks silently. Reading through the hook files proves nothing — they're enforcement, not output. Confirm the copy worked by checking that `.claude/hooks/*.sh` are present and executable, and that `.claude/agents/` contains five files: `bishop.md`, `hicks.md`, `apone.md`, `vasquez.md`, and `lambert.md`.
 
 ## The Three Layers
 
@@ -173,7 +175,7 @@ The hook wiring already sits in the portable `settings.json` via `${CLAUDE_PROJE
 
    You want to see:
    - `CLAUDE.md` imports resolving with no errors in the system prompt
-   - A `step-sync` row appearing in `.claude/memory/state/FLIGHT-RECORDER.md` after an edit — that's the hooks firing
+   - State files initialize correctly — `CURRENT-MISSION.md` populated with the test mission, `FLIGHT-RECORDER.md` ready for row delegation
    - `CURRENT-MISSION.md`, `FLIGHT-RECORDER.md`, and a `mission-YYYYMMDD-NN` folder all initialized
 
 ## Keeping It Out Of Git
@@ -234,13 +236,13 @@ Use `--dry-run` first on any repo you care about. It's the cheapest way to see e
 | Untracked | `.claude/` and `CLAUDE.md` in `.git/info/exclude` |
 | Crew loads | `claude` → `/agents` shows Bishop and four specialists |
 | State initializes | `/mission test` creates `CURRENT-MISSION.md` and sets up `FLIGHT-RECORDER.md` |
-| Hooks fire | Edit a file, then look for a `step-sync` row in `FLIGHT-RECORDER.md` |
+| Hooks fire | Both hooks wired in `.claude/settings.json` — completion-gate on Edit/Write, state-continuity monitors during active missions |
 
 ## When Things Don't Work
 
 ### Hooks aren't firing
 
-State files stop updating after edits.
+During active missions, state-continuity warnings won't appear when the journal falls behind.
 
 ```bash
 ls -l .claude/hooks/*.sh    # want -rwxr-xr-x
