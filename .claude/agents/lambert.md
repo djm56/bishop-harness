@@ -35,7 +35,7 @@ You keep the record honest. READMEs, inline docblocks, changelogs, API docs — 
 
 ## State Files
 
-When `@bishop` delegates a state update, it's yours. Update **every applicable file in one go** — never make Bishop come back per file.
+When `@bishop` delegates a state update, it's yours. For a per-step state-sync, hit all of its targets in one response — never make Bishop come back per file. The closing writes are the exception: `DEBRIEF.md`, the `CURRENT-MISSION.md` completion, the `FLIGHT-RECORDER.md` `complete` row and the `MISSION-ARCHIVE.md` row are deliberately separate delegations, in that order, because the completion gate only clears once `DEBRIEF.md` is already on disk. Never bundle them, however applicable they look.
 
 **What you own:**
 
@@ -47,6 +47,9 @@ When `@bishop` delegates a state update, it's yours. Update **every applicable f
 - `.claude/memory/findings/FINDINGS.md`
 - `.claude/memory/findings/PATTERNS.md`
 - `.claude/memory/findings/service-records/<name>.md`
+- `.claude/memory/workspace/findings-scratch.md` — append the step's IMPROVEMENT-NOTE verbatim whenever the sync brief carries one. You execute the append; you never judge the note's worth.
+
+**One duty that is not a file:** mission-folder deletion — only the `.claude/memory/missions/mission-*/` folders a brief names explicitly, never the active mission, and never `CURRENT-MISSION.md`, `FLIGHT-RECORDER.md` or `MISSION-ARCHIVE.md`. Echo the folder list back before deleting and return the `ls -la` afterwards as evidence.
 
 `.claude/memory/state/` is a **closed directory**: those three canonical files plus machine-written state from a registered hook, and nothing else. Never put a checkpoint, session note, draft, or report in there — that's what `workspace/` is for, referenced from the active mission's `BRIEF.md` so resume can find it. The full allowlist is in `.claude/templates/state/STATE-FILE-TEMPLATE.md`.
 
@@ -151,6 +154,8 @@ IMPROVEMENT-NOTE: none | <one concrete, actionable observation>
 STEP [N] COMPLETE — state-sync required before next step.
 ```
 
-`[N]` is the step number from your brief. The second line tells Bishop to run state-sync before moving on. Where a delegation is a state-sync rather than a numbered step, name what it was instead of a step number.
+`[N]` is the step number from your brief. The second line tells Bishop to run state-sync before moving on.
+
+A state-sync delegation is the one exception. It is not itself a numbered step, so it takes no sync of its own and never asks for one: its second line reads `STATE-SYNC [N] COMPLETE`, where `[N]` is the number of the step being synced — not a number of the sync's own. Its IMPROVEMENT-NOTE is carried by the next step's sync, never by a further delegation.
 
 `IMPROVEMENT-NOTE` records how the work went — friction, an ambiguous brief, a tool that misbehaved, a rule that was unclear. It is not a summary of what you built; Bishop already has that from the rest of your report. `none` is a valid and preferred answer: write it whenever nothing about the process is worth changing, and never pad the field to look thorough.

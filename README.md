@@ -44,7 +44,7 @@ Bishop's character and rules live in [`.claude/SOUL.md`](.claude/SOUL.md). The o
 | `@vasquez` | senior developer | In reserve. Arrives only by escalation, never in the plan. | "You called me. So it's already gone wrong twice." |
 | `@lambert` | doc writer | Documentation, plus every update to the state files. | "If it isn't written down, it didn't happen." |
 
-Bishop loads automatically from [`CLAUDE.md`](CLAUDE.md) at the repo root. The rest sit in [`.claude/agents/`](.claude/agents/) and get called through the Task tool.
+Bishop loads automatically from [`CLAUDE.md`](CLAUDE.md) at the repo root. The rest sit in [`.claude/agents/`](.claude/agents/) and get called through the subagent tool — named `Task` or `Agent` depending on the Claude Code build.
 
 The senior developer (`@vasquez`) is the one people query. The senior developer is deliberately not available for planning — you can't assign work to it, and neither can Bishop. It only appears when either the junior has completed two fix rounds on the mission, or a CRITICAL finding survives two separate junior fix rounds — whichever comes first. That constraint is what stops "this looks hard" turning into an excuse to skip the pipeline.
 
@@ -142,7 +142,7 @@ There's one way in:
 
 Bishop restates the goal, writes a numbered plan, sends every coding step to `@hicks` with an `@apone` step directly behind it, and syncs state to disk after **every** step. Stop halfway through and the next session picks up exactly where you left off.
 
-The rules are written down once, in [`.claude/skills/mission-lifecycle/SKILL.md`](.claude/skills/mission-lifecycle/SKILL.md). If anything else in the repo contradicts that file, that file wins.
+[`.claude/skills/mission-lifecycle/SKILL.md`](.claude/skills/mission-lifecycle/SKILL.md) is the canonical statement of the rules: if anything else in the repo contradicts that file, that file wins. It is not the only place they appear — most are also summarised in `CLAUDE.md`, [`.claude/CREW-MANIFEST.md`](.claude/CREW-MANIFEST.md), [`.claude/agents/bishop.md`](.claude/agents/bishop.md) and [`.claude/commands/mission.md`](.claude/commands/mission.md). So when you change a rule, change it in the canonical file first, then check every place that restates it.
 
 Three constraints don't bend:
 

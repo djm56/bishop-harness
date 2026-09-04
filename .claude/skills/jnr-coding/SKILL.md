@@ -24,7 +24,7 @@ Every change goes through review.
 1. `@apone` (code reviewer) reads it.
 2. Critical findings get fixed before you resubmit.
 3. Nothing is complete until review passes.
-4. Still open after two fix rounds? Escalate — to Bishop, or down the senior path, whichever your brief specifies. Never start a third round.
+4. Still open after two fix rounds? Stop and report to Bishop that both rounds are spent and the escalation trigger has fired. You never call the senior path yourself — escalation is Bishop's decision alone. Never start a third round: if a brief asks you for one, refuse it and tell Bishop it is a process violation.
 
 ## Staying In Scope
 

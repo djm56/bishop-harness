@@ -20,7 +20,7 @@ The full lifecycle — the `/mission` path that `@bishop` drives. It applies to 
 ## Terms
 
 - **Logical plan step** — a numbered step in Bishop's plan. One step is one delegation to one sub-agent (e.g. "Step 2: @hicks — implement feature X").
-- **State-sync delegation** — the required checkpoint handed to @lambert (doc writer) right after each logical step. It may go unnumbered in the written plan, but it is never optional at runtime.
+- **State-sync delegation** — the required checkpoint handed to @lambert (doc writer) right after each logical step. It may go unnumbered in the written plan, but it is never optional at runtime. It is not itself a numbered step: it takes no sync of its own, and its sign-off reads `STATE-SYNC [N] COMPLETE`, where `[N]` is the step being synced. Its own IMPROVEMENT-NOTE is carried by the next step's sync.
 - **Code-producing step** — any step that creates or changes files outside `.claude/`.
 
 ### Three Kinds Of Not Done
@@ -66,17 +66,18 @@ The ID belongs to Bishop, not to the agent creating the folder. Nobody invents t
 
 - **Bishop** decides what changed and what happens next.
 - **@lambert** does the writing, on Bishop's delegation.
-- @lambert updates all three state files (PROGRESS.md, CURRENT-MISSION.md, FLIGHT-RECORDER.md) in **one delegation**, never three separate ones.
+- @lambert updates all three state files (PROGRESS.md, CURRENT-MISSION.md, FLIGHT-RECORDER.md) — plus `findings-scratch.md` where the step's IMPROVEMENT-NOTE wasn't `none` — in **one delegation**, never as separate ones.
 
-### The Three Targets
+### The Sync Targets
 
-Every sync touches all three:
+Every sync touches three mandatory targets, plus a conditional fourth:
 
 | File | What changes |
 |------|--------------|
 | `.claude/memory/state/FLIGHT-RECORDER.md` | One appended row — the primary continuity record: Timestamp \| Mission ID \| Step \| Agent \| Event \| Note. Event is `step-sync`. This row is the authoritative record that the sync happened. |
 | `.claude/memory/state/CURRENT-MISSION.md` | The live pointer: mission id, status, owner, next action, last-updated timestamp, blockers. |
 | `.claude/memory/missions/mission-[id]/PROGRESS.md` | The finished step marked done. The plan and its live status live here. |
+| `.claude/memory/workspace/findings-scratch.md` | Conditional. Where the step's IMPROVEMENT-NOTE was not `none`, the note appended verbatim as `**Step [N] — @agent —** note`. Nothing to append when the note was `none`, and the sync confirmation says which. |
 
 ### The Audit Journal
 
@@ -99,8 +100,8 @@ That check is reported as part of the sync confirmation. A failed check gets cor
 
 | Trigger | What happens |
 |---------|--------------|
-| **Mission start** — before step 1 of a genuinely new mission | Build `missions/mission-[id]/BRIEF.md` and `PROGRESS.md` from `.claude/templates/mission/MISSION-TEMPLATE.md`, copied exactly — same headings, order, structure. Fill in the planned-step rows in `PROGRESS.md`; the plan lives there. Initialize `CURRENT-MISSION.md` with the new mission id and status `in-progress`. Confirm `FLIGHT-RECORDER.md` exists. Clear `.claude/memory/workspace/` — but only once you've confirmed the previous mission is complete or deliberately replaced, and clear it in the sense defined under The Scratch Workspace below: archive, don't delete. That item needs a shell, so it only goes to an agent whose `tools:` allowlist grants Bash. |
-| **After EVERY numbered step** | Hand a state-sync to @lambert: append the FLIGHT-RECORDER.md row, update the CURRENT-MISSION.md pointer, mark the step done in PROGRESS.md. All three, one delegation. Mandatory — and handed over **in the same turn as the step report that triggered it**. A sync mentioned in a closing sentence and left for the next turn has been skipped, not started. The step went to `in-progress` when its brief was delegated; the sync is what marks it `done`. |
+| **Mission start** — before step 1 of a genuinely new mission | Build `missions/mission-[id]/BRIEF.md` and `PROGRESS.md` from `.claude/templates/mission/MISSION-TEMPLATE.md`, copied exactly — same headings, order, structure. Fill in the planned-step rows in `PROGRESS.md`; the plan lives there. Initialize `CURRENT-MISSION.md` with the new mission id and status `in-progress`. Confirm `FLIGHT-RECORDER.md` exists. Clear `.claude/memory/workspace/` — but only once you've confirmed the previous mission is complete or deliberately replaced, and clear it in the sense defined under The Scratch Workspace below: archive, don't delete. That item needs a shell, so it only goes to an agent whose `tools:` list names Bash — an agent file with no `tools:` line inherits everything rather than being restricted, and does not satisfy this check until its list is written. |
+| **After EVERY numbered step** | Hand a state-sync to @lambert: append the FLIGHT-RECORDER.md row, update the CURRENT-MISSION.md pointer, mark the step done in PROGRESS.md, and — where the step's IMPROVEMENT-NOTE wasn't `none` — append it to `findings-scratch.md`. Three mandatory targets plus the conditional fourth, one delegation. Mandatory — and handed over **in the same turn as the step report that triggered it**. A sync mentioned in a closing sentence and left for the next turn has been skipped, not started. The step went to `in-progress` when its brief was delegated; the sync is what marks it `done`. |
 | **Operator-injected step** — scope the operator adds mid-mission | The PROGRESS.md row goes in **before** the work is delegated: status `in-progress`, note `(operator-directed, injected HH:MM UTC)`. From there it takes the same per-step sync as anything else. A row backfilled afterwards is a record repaired rather than a record kept — for the whole time the work was in flight, the state on disk didn't mention it. Urgency is the reason to write the row, not the excuse for skipping it; it costs one delegation. |
 | **Bishop-injected step** — a cleanup, correction, or remediation Bishop orders, including work arising from the closing tracker check | The PROGRESS.md row goes in **before** the work is delegated: status `in-progress`, note `(bishop-directed, injected HH:MM UTC)`. From there it takes the same per-step sync as anything else. This applies after the final numbered step as much as during the plan — remediation found by the closing tracker check is a step, and the plan grows by one. A deliverable changed with no row and no sync row is the unrecorded work that check exists to catch. |
 | **Step resumed mid-flight** — picked up from an agent's transcript rather than restarted | The resuming agent opens with a state report saying what it had and hadn't written to disk before the interruption. The step isn't synced done until that report exists, or the next step has to work it out from scratch. |
@@ -157,8 +158,9 @@ All of this has to hold before execution continues:
 3. PROGRESS.md step table — the finished step marked `done`. The next step is already `in-progress`; it was set that way when its brief went out.
 4. All three conform to `.claude/templates/state/STATE-FILE-TEMPLATE.md` and `.claude/templates/mission/MISSION-TEMPLATE.md`.
 5. The sync describes the step immediately preceding it, and nothing else.
+6. Where the step's IMPROVEMENT-NOTE was not `none`, it has been appended to `.claude/memory/workspace/findings-scratch.md` in this same delegation, and the confirmation says so.
 
-### The Completion Gate
+### The Sync-Evidence Gate
 
 - Closing actions (`CURRENT-MISSION complete`, `MISSION-ARCHIVE`) are only permitted once every logical step has sync evidence behind it.
 - A step without that evidence makes completion invalid. The mission stays `in-progress` or `blocked`.
@@ -213,6 +215,8 @@ Who gets coding work. Applies while planning *and* while executing. Bishop enfor
   - **Severity trigger** — the same CRITICAL finding is still open after two junior fix rounds, confirmed by two separate `@apone` reviews. Counted **per issue**.
   - **Round trigger** — `@hicks` has completed two fix rounds on this mission, whatever the severity of the findings. Counted **per mission**.
 - Neither trigger outranks the other. Zero CRITICAL findings does not extend the round allowance.
+- Every developer fix brief states its round index — `fix round 1 of 2` or `fix round 2 of 2` — and the review step it answers. A sub-agent cannot count its own rounds across separate delegations, so a fix brief without the index is malformed. This applies to `@vasquez`'s own rounds exactly as it does to `@hicks`'s. The index goes to the developer only; a review brief carries no round count.
+- The escalation brief to `@vasquez` names which trigger fired, the two `@apone` review step numbers behind it, and the fix-round index reached. `@vasquez` refuses a call-in missing any of the three, so a brief without them stalls the escalation instead of starting it.
 - Bishop never pre-plans that step. It appears during execution or not at all.
 
 ### Breaking Them
@@ -239,6 +243,8 @@ Any step where `@hicks` or `@vasquez` creates or changes files outside `.claude/
 5. Still failing after two senior rounds → stop and escalate to the operator. Do not keep going.
 6. `@lambert` updates docs only where it's warranted: a public API changed, new files appeared, or something README-relevant moved.
 
+**Brief content is Rule 3's job, not this section's.** Every fix brief here — junior or senior — carries the round index and the review step it answers; the escalation brief to `@vasquez` carries the trigger, both `@apone` review step numbers, and the fix-round index reached. See Rule 3 above for the exact wording; this section doesn't restate it, so the two can't drift apart the way they just did.
+
 The review step is a numbered plan step like any other, and it gets its own state-sync afterwards.
 
 **Sync the findings before the fix round starts.** When a review turns up a CRITICAL and triggers a fix round, the review's *full* findings — the non-blocking WARNINGs and the reasoning behind the decisions, not just the CRITICAL — go into `FLIGHT-RECORDER.md` before the fix begins, not afterwards with the re-review. An interruption between the review and the fix otherwise takes the WARNINGs and the context with it, and the re-review has to rediscover them.
@@ -252,7 +258,7 @@ The review step is a numbered plan step like any other, and it gets its own stat
 Every finding write follows this path. It's built so the pass can't be quietly skipped — collection forces it, rather than memory being asked to.
 
 1. **Sub-agents** end **every** step-completion report with an `IMPROVEMENT-NOTE:` line, sitting immediately above the `STEP N COMPLETE` line. The value is `none` when there was nothing — valid and expected — or one concrete, actionable observation. A report missing the line is malformed, and Bishop asks for it before syncing.
-2. **Bishop** appends each non-`none` note to `.claude/memory/workspace/findings-scratch.md` as the steps land — one line per finding: step, agent, note. `none` values aren't recorded.
+2. **Bishop delegates** each non-`none` note to `@lambert` as part of the same state-sync it hands out for that step — one line per finding: step, agent, note. Bishop writes no files, so the append is never by Bishop's own hand and never a separate delegation. `none` values aren't recorded.
 3. **Bishop** at completion reads that scratch list, adds its own Bishop-level observations, and applies the Quality Gate in `.claude/skills/self-improvement/SKILL.md` to decide what qualifies.
 4. **Bishop delegates** whatever qualifies to `@lambert`, naming the file targets and the entry content, per `.claude/templates/findings/FINDINGS-TEMPLATE.md`.
 5. **`@lambert`** appends. It executes; it doesn't decide what's worth recording.
@@ -260,6 +266,10 @@ Every finding write follows this path. It's built so the pass can't be quietly s
 > **The pass always runs; the writes are conditional.** An empty scratch list — every step reported `none` — means the pass finishes with no file writes, and that's a complete outcome. What's not allowed is skipping the collection or the pass. `findings-scratch.md` is scratch: it's archived at the next new-mission init like anything else in `workspace/`.
 
 **A process observation that would change the next brief goes into that brief now.** It doesn't wait for the pass at the end. Ask review and verification steps for process observations mid-mission, not only at completion; where one is actionable — a bundled acceptance criterion that should have been two questions, a question phrased so it can't fail — rewrite the next brief and say in it that you did. It still gets appended to the scratch file; the two aren't alternatives. The completion pass can't change an outcome. The next brief can.
+
+### Applying Approved Findings
+
+**Approved findings too.** `@hicks`, `@vasquez`, and `@apone` read `.claude/memory/findings/FINDINGS.md` during their own work — not only at completion — and apply any entry a human has moved to `approved` that bears on what's in front of them. Like `DIRECTIVES.md`, it is read-only to them here too: no agent sets or changes a `Status`, an `Approver`, or a `Date approved`.
 
 ### Agent Notes (`findings/service-records/<agent-name>.md`)
 
@@ -314,7 +324,7 @@ That fix is a **proposal, not an edit**. Agent and skill definitions are human-r
 
 Bishop derives the mission ID first (see Mission IDs above), then confirms all of this, via delegation to @lambert:
 
-1. [ ] `.claude/memory/workspace/` cleared in the archive sense — `.gitkeep` and `README.md` kept, every other `.md` moved to `archive-mission-[id]/`, `findings-scratch.md` recreated with a fresh header — and proven by a returned `ls -la` of the directory. A stated claim without the listing doesn't satisfy this item, and it only goes to an agent whose `tools:` allowlist grants Bash.
+1. [ ] `.claude/memory/workspace/` cleared in the archive sense — `.gitkeep` and `README.md` kept, every other `.md` moved to `archive-mission-[id]/`, `findings-scratch.md` recreated with a fresh header — and proven by a returned `ls -la` of the directory. A stated claim without the listing doesn't satisfy this item, and it only goes to an agent whose `tools:` list names Bash — an agent file with no `tools:` line inherits everything rather than being restricted, and does not satisfy this check until its list is written.
 2. [ ] `.claude/memory/missions/mission-[id]/BRIEF.md` built from `.claude/templates/mission/MISSION-TEMPLATE.md`, exactly. Every path written into `Key Files` confirmed to exist as it's written; a path that doesn't exist yet is marked `— to be created at step N`, never left bare. A wrong path in canonical mission state is invisible guidance — later agents assume the documented structure is right and nobody questions it.
 3. [ ] `.claude/memory/missions/mission-[id]/PROGRESS.md` built from the same template, exactly, with the step table filled in for every planned step
 4. [ ] `state/CURRENT-MISSION.md` initialized — new mission id, status `in-progress`, owner, next action
@@ -353,12 +363,28 @@ Bishop does not mark `CURRENT-MISSION.md` complete or append to `MISSION-ARCHIVE
 
 ### The Hooks
 
-Two POSIX-sh hooks in `.claude/hooks/`, wired up in `.claude/settings.json`, enforce continuity mechanically:
+Two POSIX-sh hooks in `.claude/hooks/`, wired up in `.claude/settings.json` on the `Write|Edit` matcher:
 
-- **completion-gate.sh** (PreToolUse, HARD BLOCK) — refuses to let `CURRENT-MISSION.md` go to `complete` unless the mission's `DEBRIEF.md` exists. The mechanical backstop to the closing checklist, and the only hook that blocks a close.
-- **state-continuity.sh** (PostToolUse, WARN ONLY) — warns when `FLIGHT-RECORDER.md` hasn't advanced for the active mission. Advisory. Never blocks.
+- **completion-gate.sh** (PreToolUse, HARD BLOCK) — refuses to let `CURRENT-MISSION.md` go to `complete` unless the mission's `DEBRIEF.md` exists **and** carries both mandatory sections, `Wrong Assumptions` and `Sub-Agent Mistakes and Corrections`, each with at least one table row. A heading alone is not enough: the failure that prompted the check was a section whose heading was intact with its row dropped. It also resolves the mission ID from the file on disk when the write does not carry one, so a bare edit — a `new_string` that trims to exactly `complete`, with no `Status:` text anywhere in the diff — is still caught. That bare-word match is narrow, though: `- complete`, `` `complete` ``, `complete.`, `**complete**`, and `complete |` all trim to something other than the literal word `complete`, and every one of them passes through with no denial. The only hook that blocks anything, and only for the shapes its pattern recognises.
+- **state-continuity.sh** (PostToolUse, WARN ONLY) — three advisory checks, always exiting 0. Cross-mission staleness, once the active mission has a row of its own in the journal; within-mission lag, comparing `PROGRESS.md`'s last `done` step against the newest journal row's Step, and only when the triggering write is ordinary work rather than part of the state machinery; and structural validation of the newest row — pipes, six cells, timestamp format, ordering. Both gates exist because a check that fires during the very operation it audits reports noise, not lag.
+
+**Both fail open, though not all of it is by design.** The missing-`jq` and missing-`awk` checks in `completion-gate.sh` are deliberate: an explicit `command -v` guard prints a warning and exits 0 before anything else runs, because a gate that jams the loop is worse than one that misses. But the `grep -c` count inside `check_section` has no equivalent guard — if `grep` can't produce a count, `pipe_count` comes back empty and `[ "$pipe_count" -lt 3 ]` errors instead of testing true or false, so the deny branch is skipped and the function falls through to its own success case. That path fails open too, but by accident of how `test` handles a non-numeric operand, not by a written check. Either way, neither hook can be relied on as a guarantee.
 
 Both are reversible. They back up the written rules; they don't replace them.
+
+### What Is Not Enforced
+
+Almost everything in this file is prose instruction to a model. Two things have mechanical backing, and neither is absolute — the bullets below say where each stops. `completion-gate.sh` refuses a `Write` or `Edit` that sets `CURRENT-MISSION.md` to `complete` unless a `DEBRIEF.md` exists carrying both mandatory headings. And `.claude/settings.json` carries two `permissions.deny` rules refusing `sed -i` and `perl -i`, which retire a mechanism that once corrupted a doctrine file while reporting the edit as applied. Everything else below is compliance rather than mechanism. Being specific about the gaps matters more than the reassurance of not naming them:
+
+- **Both hooks match `Write|Edit` only.** A shell mutation — `sed -i`, a redirect, a heredoc, `tee` — is invisible to both. Any agent holding Bash can write a state file with no gate consulted and no warning raised.
+- **No path in this repository is protected from an agent, and the two deny rules restrict a habit rather than a location.** Path-based rules over `.claude/agents/**`, `.claude/skills/**` and `.claude/memory/reference/DIRECTIVES.md` were added and then deliberately lifted, because locking the harness's own files blocked their own correction within a day. Even while they stood they reached only the built-in file tools and the shell file commands Claude Code recognises — never a script that opens a file itself. The two surviving rules match `sed -i` and `perl -i` literally, so `sed -i.bak`, `sed --in-place` and `perl -pi -e` all pass. Human ratification of agent and skill definitions is doctrine, not mechanism.
+- **Fail-open means not-enforced on a host missing a tool.** Without `jq` or `awk` the completion gate stands aside entirely.
+- **The mandatory-section check counts pipe-prefixed lines, not filled-in content.** `check_section` requires at least three lines starting with `|` under each heading — header, separator, one row, by shape alone. `DEBRIEF-TEMPLATE.md`'s own unfilled placeholder rows already clear that count, so a DEBRIEF.md submitted as the bare template — headings present, every field still reading `[assumption]` or `[what went wrong]` — satisfies the gate exactly as a properly filled-in one would.
+- **`MISSION-ARCHIVE.md` has no gate.** Nothing prevents an outcome row being appended out of order, or at all.
+- **`CURRENT-MISSION.md`'s `Last Updated` is checked by nothing.** Only `FLIGHT-RECORDER.md` rows have their ordering verified, and only the newest one.
+- **The delegation contract is not mechanically enforced at any point.** Rule 1, Rule 2, the fix-round limits, the escalation triggers, the per-step sync, the tracker check and the learning pass are all compliance, not mechanism. The one structural exception is `tools:` scoping, and it reaches further than just the escalation path: `Task` appears in exactly one of the five agent files, `bishop.md`. `@hicks`, `@vasquez`, `@apone`, and `@lambert` all omit it, so no sub-agent can call another agent — that makes every delegation Bishop's alone by construction, not only the hand-off to `@vasquez`.
+
+Treat every other "blocking gate" in this document as a rule an agent is asked to follow, and write briefs accordingly.
 
 ---
 
@@ -420,7 +446,8 @@ OPERATOR REQUEST
 │ A.Summary → B.Tracker check →           │
 │ C.Learning pass → D.DEBRIEF →           │
 │ E.Mark complete →                       │
-│ F.Append MISSION-ARCHIVE                │
+│ F.FLIGHT-RECORDER complete row →        │
+│ G.Append MISSION-ARCHIVE                │
 │ ⚠️ B, C and D all block the close       │
 └─────────────────────────────────────────┘
 ```
@@ -437,7 +464,7 @@ OPERATOR REQUEST
 | Mission ID derived as `mission-YYYYMMDD-NN` from folders *and* logs | Hard rule | A reused ID makes the audit trail ambiguous |
 | All 5 initialization items confirmed | Blocking gate | Step 1 can't start |
 | State-sync after each step, in the same turn | Blocking gate | Next step can't start |
-| 3-target sync validation (FLIGHT-RECORDER + CURRENT-MISSION + PROGRESS) | Blocking gate | Execution can't continue |
+| Sync validation (FLIGHT-RECORDER + CURRENT-MISSION + PROGRESS, plus findings-scratch.md when the note isn't `none`) | Blocking gate | Execution can't continue |
 | FLIGHT-RECORDER row re-read and verified after append | Blocking gate | Sync can't be reported complete |
 | Two junior fix rounds maximum, per mission | Escalation rule | Must go to @vasquez |
 | Two senior fix rounds maximum | Escalation rule | Must go to the operator |
@@ -445,8 +472,11 @@ OPERATOR REQUEST
 | Learning pass at completion | Blocking gate | Mission can't close |
 | DEBRIEF written at completion | Blocking gate | Mission can't close |
 | CURRENT-MISSION marked complete before MISSION-ARCHIVE | Sequencing | MISSION-ARCHIVE can't be appended |
+| FLIGHT-RECORDER `complete` row appended before MISSION-ARCHIVE | Sequencing | Journal and MISSION-ARCHIVE disagree about whether the mission ever closed |
 
 ---
+
+**Of everything in that table, two rows have some mechanical backing, and the two differ in kind.** `DEBRIEF written at completion` is enforced by `completion-gate.sh`, which refuses the transition to `complete` without it — that row blocks. `FLIGHT-RECORDER row re-read and verified after append` is backed too, partially: `state-continuity.sh` runs the same four structural checks — leading and trailing pipes, six cells, a valid timestamp, and forward ordering — automatically, on every write, but only as an advisory warning. It never denies the write, so the row's blocking force still rests on @lambert's manual read-back, not on the hook. Every other row is doctrine — a rule an agent is asked to follow, with nothing checking that it did. See What Is Not Enforced above.
 
 ## Templates
 

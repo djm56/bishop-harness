@@ -54,7 +54,7 @@ Mission IDs are `mission-YYYYMMDD-NN` — see the Mission IDs section of `.claud
 | 2026-08-14 09:20 UTC | mission-20260814-01 | 1 | @lambert | step-sync | CONTEXT and PROGRESS initialized |
 | 2026-08-14 09:52 UTC | mission-20260814-01 | 2 | @hicks | step-sync | Search filter implemented |
 | 2026-08-14 10:15 UTC | mission-20260814-01 | 3 | @apone | step-sync | Approved, no critical findings |
-| 2026-08-14 10:31 UTC | mission-20260814-01 | — | mission-20260814-01 | complete | All steps done, DEBRIEF written |
+| 2026-08-14 10:31 UTC | mission-20260814-01 | — | @bishop | complete | All steps done, DEBRIEF written |
 ```
 
 ### FLIGHT-RECORDER Rules
@@ -64,6 +64,7 @@ Mission IDs are `mission-YYYYMMDD-NN` — see the Mission IDs section of `.claud
 - **Timestamps** are `YYYY-MM-DD HH:MM UTC`, 24-hour, UTC. A time is never invented. If the wall-clock time genuinely isn't known, that's a defect to name in the row's Note — not a field to fill with a plausible-looking guess. A fabricated timestamp in an audit journal does more damage than a visible gap.
 - **Time moves forward.** A new row's timestamp is greater than or equal to the row above it. Always append at the end; never insert into the middle.
 - **Event values**: `step-sync` (a per-step sync), `complete` (mission closed), `blocked` (mission blocked).
+- **On a `complete` or `blocked` row**, Step is `—` and Agent is the agent that closed or blocked the mission — never the mission ID repeated. The Mission ID already has its own column.
 - **One row per event.** Each sync adds one. Completion or blocking adds one.
 - **Escape every pipe in the Note.** A literal `|` anywhere in the Note is written `\|`. Unescaped, it reads as a column separator, splits the row into surplus cells, and corrupts the table with no error and no warning. Not optional.
 - **Note** carries brief context — what the step did, or why it blocked. Keep it short; anything needing a real explanation belongs in a document in `workspace/`.
