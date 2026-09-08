@@ -189,37 +189,22 @@ fi
 # Gate 1: Configuration file and mode check.
 CONFIG_FILE="$PROJECT_ROOT/.claude/bishop-memory.conf"
 if [ -f "$CONFIG_FILE" ]; then
-  # Parse the config file directly. Read line by line with -r to avoid backslash
-  # interpretation, skip blank lines and comments, split on FIRST =, and match only
-  # the three recognized keys. Ignore unknown keys.
-  MIRROR_MODE=""
-  MIRROR_URL=""
-  MIRROR_HARNESS=""
+  # Source and call the shared conf parser. Fail open if it's missing or fails.
+  LIB_FILE="$PROJECT_ROOT/.claude/lib/bishop-memory-conf.sh"
+  # Guard on both existence and readability. [ -f ] alone passes unreadable files,
+  # which then fail when sourced (and on strict sh may be fatal). [ -r ] correctly
+  # refuses. Syntax errors in the sourced file are caught by the || exit 0 below;
+  # this check covers the file-not-readable case that [ -f ] would miss.
+  if [ ! -f "$LIB_FILE" ] || [ ! -r "$LIB_FILE" ]; then
+    exit 0
+  fi
+  . "$LIB_FILE" 2>/dev/null || exit 0
+  bishop_memory_read_conf "$CONFIG_FILE" || exit 0
 
-  while IFS= read -r CONFIG_LINE; do
-    # Skip blank lines and comment lines
-    case "$CONFIG_LINE" in
-      "") continue ;;
-      \#*) continue ;;
-    esac
-
-    # Split on the FIRST = only
-    CONFIG_KEY="${CONFIG_LINE%%=*}"
-    CONFIG_VALUE="${CONFIG_LINE#*=}"
-
-    # Match and assign only recognized keys
-    case "$CONFIG_KEY" in
-      BISHOP_MEMORY_MODE)
-        MIRROR_MODE="$CONFIG_VALUE"
-        ;;
-      BISHOP_MEMORY_URL)
-        MIRROR_URL="$CONFIG_VALUE"
-        ;;
-      BISHOP_HARNESS)
-        MIRROR_HARNESS="$CONFIG_VALUE"
-        ;;
-    esac
-  done < "$CONFIG_FILE" 2>/dev/null || exit 0
+  # Map the shared variables to hook-local names for use below.
+  MIRROR_MODE="$BISHOP_MEMORY_MODE"
+  MIRROR_URL="$BISHOP_MEMORY_URL"
+  MIRROR_HARNESS="$BISHOP_HARNESS"
 
   # Skip if mode is not central, or if harness ID is empty.
   if [ "$MIRROR_MODE" != "central" ] || [ -z "$MIRROR_HARNESS" ]; then

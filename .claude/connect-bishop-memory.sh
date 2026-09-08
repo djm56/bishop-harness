@@ -69,41 +69,27 @@ fi
 # STEP 2: Parse conf file safely
 # ============================================================================
 
-BISHOP_MEMORY_MODE=""
-BISHOP_MEMORY_URL=""
-BISHOP_HARNESS=""
-BISHOP_MEMORY_HOME=""
+LIB_FILE="$PROJECT_ROOT/.claude/lib/bishop-memory-conf.sh"
+if [ ! -f "$LIB_FILE" ]; then
+  printf '%s ERROR: %s not found.\n' "$LOG_PREFIX" "$LIB_FILE" >&2
+  exit 1
+fi
 
-while IFS= read -r CONFIG_LINE; do
-  # Skip blank lines and comment lines
-  case "$CONFIG_LINE" in
-    "") continue ;;
-    \#*) continue ;;
-  esac
+# Guard on readability before sourcing. Unreadable files fail with a clear message.
+if [ ! -r "$LIB_FILE" ]; then
+  printf '%s ERROR: %s is not readable (permission denied).\n' "$LOG_PREFIX" "$LIB_FILE" >&2
+  exit 1
+fi
 
-  # Split on the FIRST = only
-  CONFIG_KEY="${CONFIG_LINE%%=*}"
-  CONFIG_VALUE="${CONFIG_LINE#*=}"
-
-  # Match and assign only recognized keys
-  case "$CONFIG_KEY" in
-    BISHOP_MEMORY_MODE)
-      BISHOP_MEMORY_MODE="$CONFIG_VALUE"
-      ;;
-    BISHOP_MEMORY_URL)
-      BISHOP_MEMORY_URL="$CONFIG_VALUE"
-      ;;
-    BISHOP_HARNESS)
-      BISHOP_HARNESS="$CONFIG_VALUE"
-      ;;
-    BISHOP_MEMORY_HOME)
-      BISHOP_MEMORY_HOME="$CONFIG_VALUE"
-      ;;
-  esac
-done < "$CONF_FILE" 2>/dev/null || {
-  printf '%s ERROR: Could not read %s.\n' "$LOG_PREFIX" "$CONF_FILE" >&2
+. "$LIB_FILE" 2>/dev/null || {
+  printf '%s ERROR: %s sourcing failed (syntax error or other failure).\n' "$LOG_PREFIX" "$LIB_FILE" >&2
   exit 1
 }
+
+if ! bishop_memory_read_conf "$CONF_FILE"; then
+  printf '%s ERROR: Could not read %s.\n' "$LOG_PREFIX" "$CONF_FILE" >&2
+  exit 1
+fi
 
 # ============================================================================
 # STEP 3: Validate BISHOP_MEMORY_MODE
