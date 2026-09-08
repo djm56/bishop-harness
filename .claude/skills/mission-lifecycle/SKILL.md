@@ -58,6 +58,16 @@ Bishop derives the ID before delegating anything, and does it deterministically:
 
 The ID belongs to Bishop, not to the agent creating the folder. Nobody invents their own scheme.
 
+### Central Mode — When bishop-memory Owns The ID
+
+Which route applies is decided by `.claude/bishop-memory.conf` at the project root. Read it before deriving anything.
+
+- **No file, or `BISHOP_MEMORY_MODE=standalone`** — derive the ID locally exactly as described above. Nothing else changes and bishop-memory need not be running.
+- **`BISHOP_MEMORY_MODE=central`** — the ID is allocated, not derived. Call the `mission_allocate` MCP tool with the mission `title`. It returns the ID and registers the mission in one atomic operation, which is what makes duplication impossible: the row holding the ID is created in the same transaction that computed it. The owning harness comes from the project-scope MCP registration, so it does not need passing.
+- **If bishop-memory is unreachable in central mode, stop and tell the operator. Never fall back to local derivation.** State the reason plainly: local derivation is right for one harness and wrong for several — two harnesses both compute the same `NN` — and a reused ID makes the audit trail ambiguous, which is the one thing the journal exists to prevent. A blocked mission start is recoverable; a duplicate ID in an append-only journal is not.
+
+**Central mode carries two obligations.** The ID is allocated at mission start via `mission_allocate`. The reconciler runs at mission close via the script in step 10 of the Closing Checklist above. Between them, a hook mirrors journal rows continuously, so the journal needs no reconciling — the reconciler exists for the structured tables (mission steps, findings, patterns, service records) that the hook does not touch.
+
 ---
 
 ## The State-Sync Contract
@@ -356,6 +366,11 @@ Once every step is done, in this exact order:
 8. [ ] Row appended to `state/MISSION-ARCHIVE.md`
    - Append-only, columns exactly `Mission ID | Completed | Outcome | Summary`
 9. [ ] Every logical step confirmed to have sync evidence before the mission closes
+10. [ ] Reconcile bishop-memory with the Markdown (central mode only)
+   - Skip when `.claude/bishop-memory.conf` is absent or `BISHOP_MEMORY_MODE` is not `central`
+   - Run the reconciler script: `"$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root .claude/memory`
+   - Runs after step 8 so the mission's outcome is present in MISSION-ARCHIVE.md
+   - Idempotent and safe to re-run; a non-zero exit means the derived copy is stale, not that the close failed
 
 ### The Closing Gate
 
@@ -461,7 +476,7 @@ OPERATOR REQUEST
 | @hicks on every initial code step | Hard rule | Plan INVALID otherwise |
 | @apone directly after every code step | Hard rule | Plan INVALID otherwise |
 | @vasquez absent from the initial plan | Hard rule | Plan INVALID otherwise |
-| Mission ID derived as `mission-YYYYMMDD-NN` from folders *and* logs | Hard rule | A reused ID makes the audit trail ambiguous |
+| Mission ID derived locally from folders *and* logs, or allocated by bishop-memory in central mode | Hard rule | A reused ID makes the audit trail ambiguous |
 | All 5 initialization items confirmed | Blocking gate | Step 1 can't start |
 | State-sync after each step, in the same turn | Blocking gate | Next step can't start |
 | Sync validation (FLIGHT-RECORDER + CURRENT-MISSION + PROGRESS, plus findings-scratch.md when the note isn't `none`) | Blocking gate | Execution can't continue |

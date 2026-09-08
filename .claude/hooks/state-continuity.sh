@@ -175,5 +175,290 @@ if [ -n "$VALIDATION_ERRORS" ]; then
   printf '{"systemMessage":"State-continuity warning: FLIGHT-RECORDER.md newest row has issues: %s"}\n' "$VALIDATION_ERRORS"
 fi
 
+# Mirror LAST_ROW to bishop-memory if configured to do so.
+#
+# CRITICAL: This section must print NOTHING on any path — success, failure, skip.
+# The hook communicates by printing a single JSON object to stdout.
+# A second printf would emit concatenated JSON objects and corrupt the hook's
+# output contract. All mirroring work is silent by design.
+#
+# Fail open: any missing config, tool, parsing error, network failure, or
+# non-2xx response results in skipping silently and continuing to exit 0.
+#
+
+# Gate 1: Configuration file and mode check.
+CONFIG_FILE="$PROJECT_ROOT/.claude/bishop-memory.conf"
+if [ -f "$CONFIG_FILE" ]; then
+  # Parse the config file directly. Read line by line with -r to avoid backslash
+  # interpretation, skip blank lines and comments, split on FIRST =, and match only
+  # the three recognized keys. Ignore unknown keys.
+  MIRROR_MODE=""
+  MIRROR_URL=""
+  MIRROR_HARNESS=""
+
+  while IFS= read -r CONFIG_LINE; do
+    # Skip blank lines and comment lines
+    case "$CONFIG_LINE" in
+      "") continue ;;
+      \#*) continue ;;
+    esac
+
+    # Split on the FIRST = only
+    CONFIG_KEY="${CONFIG_LINE%%=*}"
+    CONFIG_VALUE="${CONFIG_LINE#*=}"
+
+    # Match and assign only recognized keys
+    case "$CONFIG_KEY" in
+      BISHOP_MEMORY_MODE)
+        MIRROR_MODE="$CONFIG_VALUE"
+        ;;
+      BISHOP_MEMORY_URL)
+        MIRROR_URL="$CONFIG_VALUE"
+        ;;
+      BISHOP_HARNESS)
+        MIRROR_HARNESS="$CONFIG_VALUE"
+        ;;
+    esac
+  done < "$CONFIG_FILE" 2>/dev/null || exit 0
+
+  # Skip if mode is not central, or if harness ID is empty.
+  if [ "$MIRROR_MODE" != "central" ] || [ -z "$MIRROR_HARNESS" ]; then
+    exit 0
+  fi
+
+  # Default the URL if unset.
+  if [ -z "$MIRROR_URL" ]; then
+    MIRROR_URL="http://127.0.0.1:8787"
+  fi
+
+  # Gate 2: Required tools.
+  if ! command -v curl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+    exit 0
+  fi
+
+  # Gate 3: Skip if the newest row is structurally invalid (VALIDATION_ERRORS is set above).
+  if [ -n "$VALIDATION_ERRORS" ]; then
+    exit 0
+  fi
+
+  # Gate 4: Parse the row and normalize fields.
+  # Schema: | Timestamp | Mission ID | Step | Agent | Event | Note |
+  # With FS="|", leading/trailing pipes produce empty first/last fields.
+  # So fields are: 2=timestamp, 3=mission, 4=step, 5=agent, 6=event, 7+...=note (rejoin with |).
+  # Output 6 values as newline-delimited lines with no quoting or escaping.
+  # Newline is safe as a delimiter because a journal row is a single line (no value can contain newline).
+  PARSED_FILE="$(mktemp)" || exit 0
+
+  printf '%s' "$LAST_ROW" | awk -F'|' '{
+    # Extract fields before trimming (awk indices account for leading/trailing empty fields).
+    ts = $2
+    mission = $3
+    step = $4
+    agent = $5
+    event = $6
+    # Note is everything from field 7 onwards, rejoin with | first (before trimming).
+    # NF is the empty field after the trailing pipe in the markdown, so use NF-1.
+    note = ""
+    for (i = 7; i < NF; i++) {
+      note = note (note ? "|" : "") $i
+    }
+    # Unescape \| in the reassembled note.
+    gsub(/\\\|/, "|", note)
+    # Now trim each field individually (note is the reassembled, unescaped version).
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", ts)
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", mission)
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", step)
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", agent)
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", event)
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", note)
+    # Output values as separate lines with no quoting or escaping (newline is safe delimiter).
+    printf "%s\n%s\n%s\n%s\n%s\n%s\n", ts, mission, step, agent, event, note
+  }' 2>/dev/null > "$PARSED_FILE"
+
+  if [ ! -s "$PARSED_FILE" ]; then
+    exit 0
+  fi
+
+  # Read the 6 values from the temp file using input redirection, not pipes.
+  # This keeps the assignments in the current shell instead of a subshell.
+  { IFS= read -r MIRROR_TS
+    IFS= read -r MIRROR_MISSION
+    IFS= read -r MIRROR_STEP
+    IFS= read -r MIRROR_AGENT
+    IFS= read -r MIRROR_EVENT
+    IFS= read -r MIRROR_NOTE
+  } < "$PARSED_FILE" || exit 0
+
+  # Normalize placeholders: treat "—" and empty as absent.
+  # Trim whitespace first, then check for placeholders.
+  MIRROR_STEP="$(printf '%s' "$MIRROR_STEP" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+  [ "$MIRROR_STEP" = "—" ] && MIRROR_STEP=""
+
+  MIRROR_AGENT="$(printf '%s' "$MIRROR_AGENT" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+  [ "$MIRROR_AGENT" = "—" ] && MIRROR_AGENT=""
+
+  MIRROR_EVENT="$(printf '%s' "$MIRROR_EVENT" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+  [ "$MIRROR_EVENT" = "—" ] && MIRROR_EVENT=""
+
+  MIRROR_NOTE="$(printf '%s' "$MIRROR_NOTE" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+  [ "$MIRROR_NOTE" = "—" ] && MIRROR_NOTE=""
+
+  # Required fields: event and note.
+  if [ -z "$MIRROR_EVENT" ] || [ -z "$MIRROR_NOTE" ]; then
+    exit 0
+  fi
+
+  # Check field length caps. Skip the row if any non-note field exceeds its cap.
+  if [ "${#MIRROR_STEP}" -gt 16 ] || [ "${#MIRROR_AGENT}" -gt 64 ] || [ "${#MIRROR_EVENT}" -gt 64 ] || [ "${#MIRROR_TS}" -gt 64 ]; then
+    exit 0
+  fi
+
+  # Truncate note to 2000 characters. Use cut to enforce exact character limit.
+  if [ "${#MIRROR_NOTE}" -gt 2000 ]; then
+    MIRROR_NOTE="$(printf '%s' "$MIRROR_NOTE" | cut -c1-2000)"
+  fi
+
+  # Gate 5: Mutex and cursor, to avoid duplicate events.
+  # Cursor path: .claude/memory/state/.bishop-memory-cursor
+  # Lock path: .claude/memory/state/.bishop-memory-lock
+  # This directory is deliberately closed (per CREW-MANIFEST.md) to hold
+  # "machine-written state from a registered hook" — exactly what these are.
+  CURSOR_FILE="$PROJECT_ROOT/.claude/memory/state/.bishop-memory-cursor"
+  LOCK_DIR="$PROJECT_ROOT/.claude/memory/state/.bishop-memory-lock"
+  LOCK_THRESHOLD=60  # seconds. Stale locks older than this are removed. The hook
+                     # has a 10s timeout and curl has a 2s budget, so 60s generously
+                     # covers normal execution and detects truly abandoned locks.
+
+  # Try to acquire the lock. If it already exists, another hook invocation is
+  # mirroring — skip silently to avoid duplicates. If it's stale (older than
+  # LOCK_THRESHOLD), remove it and retry.
+  if mkdir "$LOCK_DIR" 2>/dev/null; then
+    # Lock acquired. Set up trap to release it and clean up temp file on all exit paths.
+    trap "rm -f '$PARSED_FILE' 2>/dev/null; rmdir '$LOCK_DIR' 2>/dev/null" EXIT
+
+    # Compute checksum of LAST_ROW (without leading/trailing whitespace).
+    ROW_CHECKSUM="$(printf '%s' "$LAST_ROW" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | cksum | awk '{print $1}')"
+
+    # If cursor exists and contains the same checksum, skip (already mirrored).
+    if [ -f "$CURSOR_FILE" ]; then
+      LAST_CHECKSUM="$(cat "$CURSOR_FILE" 2>/dev/null)"
+      if [ "$LAST_CHECKSUM" = "$ROW_CHECKSUM" ]; then
+        exit 0
+      fi
+    fi
+
+    # Build the JSON request. Omit absent fields (step, agent) but never omit
+    # occurred_at (timestamp), mission_id, event, or note (already gated above).
+    JSON_BODY="$(jq -n \
+      --arg ts "$MIRROR_TS" \
+      --arg mission "$MIRROR_MISSION" \
+      --arg step "$MIRROR_STEP" \
+      --arg agent "$MIRROR_AGENT" \
+      --arg event "$MIRROR_EVENT" \
+      --arg note "$MIRROR_NOTE" \
+      '{
+        occurred_at: $ts,
+        mission_id: $mission,
+        event: $event,
+        note: $note
+      } | if $step != "" then .step = $step else . end | if $agent != "" then .agent = $agent else . end' \
+      2>/dev/null)"
+
+    if [ -z "$JSON_BODY" ]; then
+      exit 0
+    fi
+
+    # POST the request. Use a 2s timeout (the hook's 10s budget is not for hanging).
+    # Capture the HTTP status code. Fail open on any error.
+    HTTP_CODE="$(curl --silent --show-error --max-time 2 \
+      -X POST \
+      "$MIRROR_URL/v1/flight-recorder" \
+      -H "Content-Type: application/json" \
+      -d "$JSON_BODY" \
+      --output /dev/null \
+      --write-out '%{http_code}' \
+      2>/dev/null)"
+
+    # Check for 2xx success codes (200, 201, etc). Non-2xx means the request failed.
+    if [ -z "$HTTP_CODE" ] || ! printf '%s' "$HTTP_CODE" | grep -qE '^2[0-9][0-9]$'; then
+      # Request failed or non-2xx response. Leave the cursor untouched so
+      # the next write will retry naturally. Fail open and continue.
+      exit 0
+    fi
+
+    # 2xx response confirmed. Write the cursor only now, so a failed POST
+    # leaves it untouched for retry.
+    printf '%s' "$ROW_CHECKSUM" > "$CURSOR_FILE" 2>/dev/null || true
+
+    exit 0
+  else
+    # Lock directory already exists. Check if it's stale (older than LOCK_THRESHOLD).
+    LOCK_MTIME="$(stat -f '%m' "$LOCK_DIR" 2>/dev/null)" || exit 0
+    CURRENT_TIME="$(date +%s)"
+    LOCK_AGE=$((CURRENT_TIME - LOCK_MTIME))
+
+    if [ "$LOCK_AGE" -gt "$LOCK_THRESHOLD" ]; then
+      # Lock is stale. Remove it and retry.
+      rmdir "$LOCK_DIR" 2>/dev/null && mkdir "$LOCK_DIR" 2>/dev/null && {
+        # Lock acquired. Set up trap to release it and clean up temp file on all exit paths.
+        trap "rm -f '$PARSED_FILE' 2>/dev/null; rmdir '$LOCK_DIR' 2>/dev/null" EXIT
+
+        # Compute checksum of LAST_ROW (without leading/trailing whitespace).
+        ROW_CHECKSUM="$(printf '%s' "$LAST_ROW" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | cksum | awk '{print $1}')"
+
+        # If cursor exists and contains the same checksum, skip (already mirrored).
+        if [ -f "$CURSOR_FILE" ]; then
+          LAST_CHECKSUM="$(cat "$CURSOR_FILE" 2>/dev/null)"
+          if [ "$LAST_CHECKSUM" = "$ROW_CHECKSUM" ]; then
+            exit 0
+          fi
+        fi
+
+        # Build the JSON request.
+        JSON_BODY="$(jq -n \
+          --arg ts "$MIRROR_TS" \
+          --arg mission "$MIRROR_MISSION" \
+          --arg step "$MIRROR_STEP" \
+          --arg agent "$MIRROR_AGENT" \
+          --arg event "$MIRROR_EVENT" \
+          --arg note "$MIRROR_NOTE" \
+          '{
+            occurred_at: $ts,
+            mission_id: $mission,
+            event: $event,
+            note: $note
+          } | if $step != "" then .step = $step else . end | if $agent != "" then .agent = $agent else . end' \
+          2>/dev/null)"
+
+        if [ -z "$JSON_BODY" ]; then
+          exit 0
+        fi
+
+        # POST the request.
+        HTTP_CODE="$(curl --silent --show-error --max-time 2 \
+          -X POST \
+          "$MIRROR_URL/v1/flight-recorder" \
+          -H "Content-Type: application/json" \
+          -d "$JSON_BODY" \
+          --output /dev/null \
+          --write-out '%{http_code}' \
+          2>/dev/null)"
+
+        # Check for 2xx success codes.
+        if [ -z "$HTTP_CODE" ] || ! printf '%s' "$HTTP_CODE" | grep -qE '^2[0-9][0-9]$'; then
+          exit 0
+        fi
+
+        # 2xx response confirmed. Write the cursor.
+        printf '%s' "$ROW_CHECKSUM" > "$CURSOR_FILE" 2>/dev/null || true
+
+        exit 0
+      }
+    fi
+    # Lock exists and is fresh. Another invocation is handling this row. Skip silently.
+    exit 0
+  fi
+fi
+
 # Always 0. This hook advises; it never blocks.
 exit 0

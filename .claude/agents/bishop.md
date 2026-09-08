@@ -167,7 +167,12 @@ E. ONLY THEN move to step N+1.
 
 ## Standing Up A New Mission
 
-Before step 1 runs on a genuinely new mission, **derive the mission ID yourself**: `mission-YYYYMMDD-NN`, using today's **UTC** date and the daily-reset counter defined in the Mission IDs section of `.claude/skills/mission-lifecycle/SKILL.md`. To pick `NN`, scan existing `.claude/memory/missions/mission-<date>-*` folders **and** rows referencing `mission-<date>-*` in `FLIGHT-RECORDER.md` and `MISSION-ARCHIVE.md`; take the highest you find and add one, or `01` if there are none. Folders get deleted by cleanup; the logs don't — checking both is what stops an ID coming back around.
+Before step 1 runs on a genuinely new mission, get the mission ID. The method depends on `.claude/bishop-memory.conf`. Read it first.
+
+- **No file, or `BISHOP_MEMORY_MODE=standalone`** — derive the ID locally, using today's **UTC** date and the daily-reset counter. Scan existing `.claude/memory/missions/mission-<date>-*` folders **and** rows referencing `mission-<date>-*` in `FLIGHT-RECORDER.md` and `MISSION-ARCHIVE.md`; take the highest you find and add one, or `01` if there are none. Folders get deleted by cleanup; the logs don't — checking both is what stops an ID coming back around.
+- **`BISHOP_MEMORY_MODE=central`** — call the `mission_allocate` MCP tool with the mission `title`. It returns the ID and registers the mission in one atomic operation.
+
+For the full rules covering both modes, see the Mission IDs section of `.claude/skills/mission-lifecycle/SKILL.md`.
 
 Then hand `@lambert` the following, passing the derived ID:
 
@@ -279,9 +284,27 @@ F. ONLY AFTER E: hand over one `FLIGHT-RECORDER.md` row, event=`complete`,
    read back and verified.
 
 G. ONLY AFTER F: hand over the outcome row appended to `MISSION-ARCHIVE.md`.
+
+H. ONLY AFTER G: reconcile bishop-memory against the Markdown.
+   - Skip entirely when `.claude/bishop-memory.conf` is absent or
+     BISHOP_MEMORY_MODE is not `central`. In standalone mode there is
+     nothing to reconcile.
+   - Delegate it — you hold no state-changing commands. The receiving
+     agent's `tools:` list must name Bash.
+   - Command: "$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root
+     .claude/memory   (both values read from the conf)
+   - It runs AFTER G because it reads MISSION-ARCHIVE.md for the mission's
+     outcome. Run earlier and the mission reconciles as still open.
+   - It is idempotent, so a re-run is safe and a failure is recoverable by
+     running it again.
+   - A non-zero exit does NOT reopen the mission — the Markdown is the
+     source of truth and is already correct. Report it to the operator as
+     a stale derived copy, and say which entity counts disagreed.
 ```
 
 **If you break it**: marking `CURRENT-MISSION.md` complete or appending to `MISSION-ARCHIVE.md` before the tracker check (B), the learning pass (C), and the `DEBRIEF.md` (D) means the completion contract is broken and the mission is not done. Go back and run all three before closing. Skipping the `FLIGHT-RECORDER` `complete` row at (F) breaks it too: the journal and `MISSION-ARCHIVE.md` then disagree about whether the mission ever closed.
+
+Skipping step H leaves the derived copy in bishop-memory stale — the mission is genuinely closed and the Markdown is authoritative, so this is a reporting failure rather than a broken close. Steps A–G are the completion contract; step H keeps the mirror honest.
 
 **No exceptions**: every mission, long or short, trivial or not. The learning pass always runs. The only thing that varies is whether it ends in file writes or in nothing worth writing.
 
