@@ -368,7 +368,10 @@ Once every step is done, in this exact order:
 9. [ ] Every logical step confirmed to have sync evidence before the mission closes
 10. [ ] Reconcile bishop-memory with the Markdown (central mode only)
    - Skip when `.claude/bishop-memory.conf` is absent or `BISHOP_MEMORY_MODE` is not `central`
-   - Run the reconciler script: `"$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root .claude/memory`
+   - Run the reconciler script: `"$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root .claude/memory --url "$BISHOP_MEMORY_URL"`
+     (both `BISHOP_MEMORY_HOME` and `BISHOP_MEMORY_URL` read from the conf; omit
+     `--url` entirely when the conf's URL is empty rather than passing it as ""
+     — the reconciler's own default then applies)
    - Runs after step 8 so the mission's outcome is present in MISSION-ARCHIVE.md
    - Idempotent and safe to re-run; a non-zero exit means the derived copy is stale, not that the close failed
 

@@ -54,6 +54,106 @@ if [ -z "$FILE_PATH" ] || printf '%s' "$FILE_PATH" | grep -q '\.claude/memory/';
   RUN_LAG_CHECK="no"
 fi
 
+# Gate for live reconciliation: read config early, before any early exits.
+# The reconciliation trigger depends only on FILE_PATH and the conf parser,
+# not on unrelated mission state. This enables reconciliation to fire even when
+# CURRENT-MISSION, FLIGHT-RECORDER, or their contents are absent or unparseable.
+MIRROR_MODE=""
+MIRROR_URL=""
+MIRROR_HARNESS=""
+CONFIG_FILE="$PROJECT_ROOT/.claude/bishop-memory.conf"
+if [ -f "$CONFIG_FILE" ]; then
+  LIB_FILE="$PROJECT_ROOT/.claude/lib/bishop-memory-conf.sh"
+  if [ -f "$LIB_FILE" ] && [ -r "$LIB_FILE" ]; then
+    . "$LIB_FILE" 2>/dev/null && bishop_memory_read_conf "$CONFIG_FILE" 2>/dev/null && {
+      MIRROR_MODE="$BISHOP_MEMORY_MODE"
+      MIRROR_URL="$BISHOP_MEMORY_URL"
+      MIRROR_HARNESS="$BISHOP_HARNESS"
+    }
+  fi
+fi
+
+# Trigger live reconciliation for memory-tree writes (--skip-steps for speed).
+#
+# After every FLIGHT-RECORDER.md write and other memory-tree mutations, fire a
+# detached reconcile to keep everything else — findings, patterns, service
+# records, mission status — in sync mid-mission without waiting.
+#
+# Why detached: Against a hung service (accepted connection, no response), a
+# synchronous wait could exceed the hook's 10s budget. Running fire-and-forget
+# means the hook returns instantly; correctness is still guaranteed by step H
+# (full reconcile at mission close). A refused connection returns instantly.
+#
+# Why the lock: Two concurrent invocations could each start a reconcile before
+# either writes, both fetch existing rows before either commits, and both create
+# the same missing entities — the dedupe cannot protect against a race it cannot
+# see. We use the same lock structure as the mirror: mkdir for atomicity, stale-
+# lock detection and cleanup after threshold seconds.
+#
+# Why --skip-steps: Steps update only at mission close (step H) because the
+# dedupe key excludes status, so mid-mission steps would freeze at "pending" with
+# no way to update. Everything else is safe: findings, patterns, service records,
+# mission metadata all have status-inclusive keys. --no-sync-documents is NOT
+# passed; refreshing the document index keeps memory_search current mid-mission.
+#
+if [ "$MIRROR_MODE" = "central" ] && [ -n "$MIRROR_HARNESS" ]; then
+  if printf '%s' "$FILE_PATH" | grep -q '\.claude/memory/'; then
+    if [ -n "$BISHOP_MEMORY_HOME" ] && [ -x "$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" ]; then
+      RECONCILE_LOCK_DIR="$PROJECT_ROOT/.claude/memory/state/.bishop-memory-reconcile-lock"
+
+      if mkdir "$RECONCILE_LOCK_DIR" 2>/dev/null; then
+        # Lock acquired. Fire detached reconcile in a subshell that releases the lock on exit.
+        # The parent shell continues to exit 0 immediately.
+        # The & must come AFTER the closing parenthesis to background the entire subshell,
+        # not just the rmdir command. Without it, the hook waits synchronously for reconcile.
+        #
+        # The lock is released via EXIT/TERM traps inside the subshell rather than a trailing
+        # `; rmdir`, so it still fires if the harness kills this process group with SIGTERM at
+        # its timeout boundary — a plain `cmd; rmdir` never reaches the rmdir once the shell
+        # itself is signalled instead of returning normally. SIGKILL cannot be trapped by any
+        # shell; that residual case is unchanged and still self-heals via the stale-lock check
+        # below. This does not make the hook wait: the subshell is still backgrounded and the
+        # parent returns immediately either way.
+        #
+        # --url is passed explicitly, and only when the conf supplies one, so the reconciler's
+        # own default (identical to MIRROR_URL's fallback below) applies when it's empty.
+        # Passing an empty string here would override that default with "" instead of leaving
+        # it unset.
+        if [ -n "$MIRROR_URL" ]; then
+          ( trap 'rmdir "$RECONCILE_LOCK_DIR" 2>/dev/null; exit 143' TERM
+            trap 'rmdir "$RECONCILE_LOCK_DIR" 2>/dev/null' EXIT
+            "$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root "$PROJECT_ROOT/.claude/memory" --skip-steps --url "$MIRROR_URL" >/dev/null 2>&1
+          ) &
+        else
+          ( trap 'rmdir "$RECONCILE_LOCK_DIR" 2>/dev/null; exit 143' TERM
+            trap 'rmdir "$RECONCILE_LOCK_DIR" 2>/dev/null' EXIT
+            "$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root "$PROJECT_ROOT/.claude/memory" --skip-steps >/dev/null 2>&1
+          ) &
+        fi
+      else
+        # Lock already held. Check if it is stale.
+        LOCK_MTIME="$(stat -f '%m' "$RECONCILE_LOCK_DIR" 2>/dev/null)"
+        if [ -n "$LOCK_MTIME" ]; then
+          CURRENT_TIME="$(date +%s)"
+          LOCK_AGE=$((CURRENT_TIME - LOCK_MTIME))
+          # 60s, matching the mirror lock's own threshold below. Measured rather than
+          # guessed: a --skip-steps reconcile (the only invocation this path ever fires)
+          # ran in 0.099s against the live data at time of writing — roughly 600x
+          # headroom under this threshold. The TOCTOU window this guards against (a
+          # second invocation taking a fresh lock while the first is still running, then
+          # the first's unconditional lock release removing the second's lock) is
+          # therefore remote rather than live; kept generous rather than tightened.
+          RECONCILE_LOCK_THRESHOLD=60
+          if [ "$LOCK_AGE" -gt "$RECONCILE_LOCK_THRESHOLD" ]; then
+            # Stale lock. Remove it and do NOT fire this time — let the next write trigger normally.
+            rmdir "$RECONCILE_LOCK_DIR" 2>/dev/null
+          fi
+        fi
+      fi
+    fi
+  fi
+fi
+
 # Which mission is currently active?
 CURRENT_MISSION_FILE="$PROJECT_ROOT/.claude/memory/state/CURRENT-MISSION.md"
 if [ ! -f "$CURRENT_MISSION_FILE" ]; then
@@ -187,25 +287,8 @@ fi
 #
 
 # Gate 1: Configuration file and mode check.
-CONFIG_FILE="$PROJECT_ROOT/.claude/bishop-memory.conf"
+# Conf is already parsed above (for reconciliation trigger). Reuse those variables.
 if [ -f "$CONFIG_FILE" ]; then
-  # Source and call the shared conf parser. Fail open if it's missing or fails.
-  LIB_FILE="$PROJECT_ROOT/.claude/lib/bishop-memory-conf.sh"
-  # Guard on both existence and readability. [ -f ] alone passes unreadable files,
-  # which then fail when sourced (and on strict sh may be fatal). [ -r ] correctly
-  # refuses. Syntax errors in the sourced file are caught by the || exit 0 below;
-  # this check covers the file-not-readable case that [ -f ] would miss.
-  if [ ! -f "$LIB_FILE" ] || [ ! -r "$LIB_FILE" ]; then
-    exit 0
-  fi
-  . "$LIB_FILE" 2>/dev/null || exit 0
-  bishop_memory_read_conf "$CONFIG_FILE" || exit 0
-
-  # Map the shared variables to hook-local names for use below.
-  MIRROR_MODE="$BISHOP_MEMORY_MODE"
-  MIRROR_URL="$BISHOP_MEMORY_URL"
-  MIRROR_HARNESS="$BISHOP_HARNESS"
-
   # Skip if mode is not central, or if harness ID is empty.
   if [ "$MIRROR_MODE" != "central" ] || [ -z "$MIRROR_HARNESS" ]; then
     exit 0
@@ -226,7 +309,7 @@ if [ -f "$CONFIG_FILE" ]; then
     exit 0
   fi
 
-  # Gate 4: Parse the row and normalize fields.
+  # Gate 4: Parse the row and normalize fields for mirroring to bishop-memory.
   # Schema: | Timestamp | Mission ID | Step | Agent | Event | Note |
   # With FS="|", leading/trailing pipes produce empty first/last fields.
   # So fields are: 2=timestamp, 3=mission, 4=step, 5=agent, 6=event, 7+...=note (rejoin with |).
@@ -303,7 +386,7 @@ if [ -f "$CONFIG_FILE" ]; then
     MIRROR_NOTE="$(printf '%s' "$MIRROR_NOTE" | cut -c1-2000)"
   fi
 
-  # Gate 5: Mutex and cursor, to avoid duplicate events.
+  # Gate 5: Mutex and cursor, to avoid duplicate mirror events.
   # Cursor path: .claude/memory/state/.bishop-memory-cursor
   # Lock path: .claude/memory/state/.bishop-memory-lock
   # This directory is deliberately closed (per CREW-MANIFEST.md) to hold
