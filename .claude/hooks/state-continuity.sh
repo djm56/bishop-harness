@@ -73,7 +73,7 @@ if [ -f "$CONFIG_FILE" ]; then
   fi
 fi
 
-# Trigger live reconciliation for memory-tree writes (--skip-steps for speed).
+# Trigger live reconciliation for memory-tree writes.
 #
 # After every FLIGHT-RECORDER.md write and other memory-tree mutations, fire a
 # detached reconcile to keep everything else — findings, patterns, service
@@ -90,16 +90,116 @@ fi
 # see. We use the same lock structure as the mirror: mkdir for atomicity, stale-
 # lock detection and cleanup after threshold seconds.
 #
-# Why --skip-steps: Steps update only at mission close (step H) because the
-# dedupe key excludes status, so mid-mission steps would freeze at "pending" with
-# no way to update. Everything else is safe: findings, patterns, service records,
-# mission metadata all have status-inclusive keys. --no-sync-documents is NOT
-# passed; refreshing the document index keeps memory_search current mid-mission.
+# Why the pending marker: A burst of writes (e.g., during state-sync) can
+# generate multiple PostToolUse fires in quick succession. The first takes the
+# lock and runs a reconcile lasting ~0.1–0.2 seconds. Subsequent fires in the
+# burst find the lock held and not yet stale (60s threshold). Each such fire
+# creates a marker; the lock holder checks for it once, before releasing, and
+# if found, drains it with exactly one more reconcile pass.
 #
+# The drain is bounded to two passes total per fire (the first pass plus at
+# most one drain pass) rather than looping until the marker is clear. A marker
+# is only ever deleted by a pass that then actually runs: the first pass
+# deletes the marker it found and immediately runs the second pass to answer
+# it; the second pass does not re-check the marker at all, so a marker set
+# while the second pass is running is left on disk untouched. That marker is
+# then picked up by the very next fire (present or future), which drains it on
+# its own first pass. This is what keeps the two invariants that matter true
+# on every path: (1) the lock is held for at most ~2x a single reconcile's
+# runtime, not the length of the burst, and (2) a write already recorded by a
+# marker is never lost — either this fire answers it, or the next one does.
+#
+# do_one_reconcile: run exactly one reconcile-memory.py invocation and log a
+# failure. $1 is "yes"/"no" for whether to pass --url $MIRROR_URL — kept as an
+# argument rather than two near-duplicate call sites, since --url is the only
+# thing that differs between the two places this used to be inlined.
+do_one_reconcile() {
+  _RECONCILE_INCLUDE_URL="$1"
+
+  # mktemp can fail (unwritable TMPDIR, exhausted disk). Redirecting stderr to
+  # an empty filename aborts the command it's attached to before it runs —
+  # confirmed by test — which would silently skip the reconcile itself, not
+  # just its logging. Fall back to /dev/null so the redirect target is always
+  # valid; a fallback run still reconciles, it just has no stderr to log.
+  RECONCILE_STDERR_FILE="$(mktemp 2>/dev/null)"
+  if [ -z "$RECONCILE_STDERR_FILE" ]; then
+    RECONCILE_STDERR_FILE="/dev/null"
+  fi
+
+  if [ "$_RECONCILE_INCLUDE_URL" = "yes" ]; then
+    "$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root "$PROJECT_ROOT/.claude/memory" --url "$MIRROR_URL" >/dev/null 2>"$RECONCILE_STDERR_FILE"
+  else
+    "$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root "$PROJECT_ROOT/.claude/memory" >/dev/null 2>"$RECONCILE_STDERR_FILE"
+  fi
+  RECONCILE_EXIT=$?
+
+  # Log errors if the reconcile failed (non-zero exit). Log to ~/Library/Logs/bishop-memory/
+  # if it exists, silently skip if not. This gives us audit trail of failures without overhead.
+  if [ "$RECONCILE_EXIT" -ne 0 ]; then
+    RECONCILE_LOGDIR="$HOME/Library/Logs/bishop-memory"
+    if [ -d "$RECONCILE_LOGDIR" ]; then
+      RECONCILE_LOGFILE="$RECONCILE_LOGDIR/state-continuity.log"
+      # Bound the log: once it passes ~1MB, rotate it to a single .1 backup
+      # rather than letting it grow without limit. Rotation is best-effort —
+      # a failure here must never fail the hook.
+      RECONCILE_LOGSIZE="$(wc -c <"$RECONCILE_LOGFILE" 2>/dev/null | tr -d '[:space:]')"
+      case "$RECONCILE_LOGSIZE" in
+        ''|*[!0-9]*) : ;;
+        *)
+          if [ "$RECONCILE_LOGSIZE" -gt 1048576 ]; then
+            mv -f "$RECONCILE_LOGFILE" "$RECONCILE_LOGFILE.1" 2>/dev/null || true
+          fi
+          ;;
+      esac
+      {
+        # UTC, matching the journal and everything else this hook touches —
+        # a local-time entry under a UTC-labeled log is exactly the kind of
+        # mismatch this mission already had to repair once in FLIGHT-RECORDER.md.
+        echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] reconcile failed with exit code $RECONCILE_EXIT"
+        if [ "$RECONCILE_STDERR_FILE" != "/dev/null" ] && [ -f "$RECONCILE_STDERR_FILE" ] && [ -s "$RECONCILE_STDERR_FILE" ]; then
+          cat "$RECONCILE_STDERR_FILE"
+        fi
+        echo ""
+      } >> "$RECONCILE_LOGFILE" 2>/dev/null || true
+    fi
+  fi
+
+  if [ "$RECONCILE_STDERR_FILE" != "/dev/null" ]; then
+    rm -f "$RECONCILE_STDERR_FILE" 2>/dev/null
+  fi
+}
+
+# run_reconcile_burst: fire one reconcile, then drain at most one more pass if
+# a marker arrived while it ran. See the invariant note above the function
+# definitions for why the drain is bounded to exactly two passes and why a
+# marker set during the second pass is left in place rather than cleared.
+run_reconcile_burst() {
+  do_one_reconcile "$1"
+  if [ -f "$RECONCILE_PENDING_MARKER" ]; then
+    rm -f "$RECONCILE_PENDING_MARKER" 2>/dev/null
+    do_one_reconcile "$1"
+  fi
+}
+
 if [ "$MIRROR_MODE" = "central" ] && [ -n "$MIRROR_HARNESS" ]; then
   if printf '%s' "$FILE_PATH" | grep -q '\.claude/memory/'; then
     if [ -n "$BISHOP_MEMORY_HOME" ] && [ -x "$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" ]; then
+      # This directory is deliberately closed (per CREW-MANIFEST.md) to hold
+      # "machine-written state from a registered hook" — exactly what this
+      # lock and marker are. Same convention as the mirror's own lock/cursor
+      # pair further below.
       RECONCILE_LOCK_DIR="$PROJECT_ROOT/.claude/memory/state/.bishop-memory-reconcile-lock"
+      RECONCILE_PENDING_MARKER="$PROJECT_ROOT/.claude/memory/state/.bishop-memory-reconcile-pending"
+
+      # --url is passed explicitly, and only when the conf supplies one, so the reconciler's
+      # own default (identical to MIRROR_URL's fallback below) applies when it's empty.
+      # Passing an empty string here would override that default with "" instead of leaving
+      # it unset. Computed once and reused by every fire site below.
+      if [ -n "$MIRROR_URL" ]; then
+        RECONCILE_INCLUDE_URL="yes"
+      else
+        RECONCILE_INCLUDE_URL="no"
+      fi
 
       if mkdir "$RECONCILE_LOCK_DIR" 2>/dev/null; then
         # Lock acquired. Fire detached reconcile in a subshell that releases the lock on exit.
@@ -115,38 +215,54 @@ if [ "$MIRROR_MODE" = "central" ] && [ -n "$MIRROR_HARNESS" ]; then
         # below. This does not make the hook wait: the subshell is still backgrounded and the
         # parent returns immediately either way.
         #
-        # --url is passed explicitly, and only when the conf supplies one, so the reconciler's
-        # own default (identical to MIRROR_URL's fallback below) applies when it's empty.
-        # Passing an empty string here would override that default with "" instead of leaving
-        # it unset.
-        if [ -n "$MIRROR_URL" ]; then
-          ( trap 'rmdir "$RECONCILE_LOCK_DIR" 2>/dev/null; exit 143' TERM
-            trap 'rmdir "$RECONCILE_LOCK_DIR" 2>/dev/null' EXIT
-            "$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root "$PROJECT_ROOT/.claude/memory" --skip-steps --url "$MIRROR_URL" >/dev/null 2>&1
-          ) &
-        else
-          ( trap 'rmdir "$RECONCILE_LOCK_DIR" 2>/dev/null; exit 143' TERM
-            trap 'rmdir "$RECONCILE_LOCK_DIR" 2>/dev/null' EXIT
-            "$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root "$PROJECT_ROOT/.claude/memory" --skip-steps >/dev/null 2>&1
-          ) &
-        fi
+        # A TERM delivered mid-drain (during either pass) hits this trap, which releases the
+        # lock and exits — it does not clear whatever marker may be on disk. That's safe: no
+        # loop reads the marker again after this subshell is gone, so a surviving marker cannot
+        # cause an endless re-run: it simply waits for the next fire to consume it, same as any
+        # other marker left after a bounded drain completes normally.
+        ( trap 'rmdir "$RECONCILE_LOCK_DIR" 2>/dev/null; exit 143' TERM
+          trap 'rmdir "$RECONCILE_LOCK_DIR" 2>/dev/null' EXIT
+          run_reconcile_burst "$RECONCILE_INCLUDE_URL"
+        ) &
       else
-        # Lock already held. Check if it is stale.
+        # Lock already held. Set pending marker so the lock holder knows to re-run
+        # after the current reconcile completes. This coalesces multiple fires in a
+        # burst into at most one additional reconcile run (plus the one already in progress).
+        touch "$RECONCILE_PENDING_MARKER" 2>/dev/null || true
+
+        # Also check if lock is stale and clean it if needed.
         LOCK_MTIME="$(stat -f '%m' "$RECONCILE_LOCK_DIR" 2>/dev/null)"
         if [ -n "$LOCK_MTIME" ]; then
           CURRENT_TIME="$(date +%s)"
           LOCK_AGE=$((CURRENT_TIME - LOCK_MTIME))
           # 60s, matching the mirror lock's own threshold below. Measured rather than
-          # guessed: a --skip-steps reconcile (the only invocation this path ever fires)
-          # ran in 0.099s against the live data at time of writing — roughly 600x
-          # headroom under this threshold. The TOCTOU window this guards against (a
-          # second invocation taking a fresh lock while the first is still running, then
-          # the first's unconditional lock release removing the second's lock) is
-          # therefore remote rather than live; kept generous rather than tightened.
+          # guessed: a single reconcile (which fires at each memory-tree write) runs in
+          # ~0.1–0.2s against the live data at time of writing, and the bounded drain
+          # above caps a fire at two such passes — so a lock is realistically held for a
+          # few tenths of a second, not the length of a burst. That leaves roughly
+          # 150–300x headroom under this threshold. The TOCTOU window this guards
+          # against (a second invocation taking a fresh lock while the first is still
+          # running, then the first's unconditional lock release removing the second's
+          # lock) is therefore remote rather than live; kept generous rather than
+          # tightened.
           RECONCILE_LOCK_THRESHOLD=60
           if [ "$LOCK_AGE" -gt "$RECONCILE_LOCK_THRESHOLD" ]; then
-            # Stale lock. Remove it and do NOT fire this time — let the next write trigger normally.
+            # Stale lock: its holder is gone, so nothing will ever drain the marker we
+            # just touched above. Deleting the marker here without running it would drop
+            # the write it represents — the exact defect this mechanism exists to fix, in
+            # the one path where a dead or overrunning holder makes it most likely. So:
+            # remove the stale lock and make one immediate re-attempt to acquire it. Win
+            # it, and this fire becomes the new holder — background a burst-drain exactly
+            # like the normal acquisition path, which also drains the marker already on
+            # disk. Lose it to a concurrent fire, and leave the marker in place; the
+            # winner's own post-reconcile check picks it up.
             rmdir "$RECONCILE_LOCK_DIR" 2>/dev/null
+            if mkdir "$RECONCILE_LOCK_DIR" 2>/dev/null; then
+              ( trap 'rmdir "$RECONCILE_LOCK_DIR" 2>/dev/null; exit 143' TERM
+                trap 'rmdir "$RECONCILE_LOCK_DIR" 2>/dev/null' EXIT
+                run_reconcile_burst "$RECONCILE_INCLUDE_URL"
+              ) &
+            fi
           fi
         fi
       fi

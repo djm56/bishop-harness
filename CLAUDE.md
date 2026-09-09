@@ -81,7 +81,7 @@ This documentation explains how to use bishop-memory's MCP adapter (`mcpd`) when
 bishop-memory is **opt-in**. `.claude/bishop-memory.conf` is the only switch:
 
 - **No conf file, or `BISHOP_MEMORY_MODE=standalone`** — the harness owns its memory entirely. Mission IDs are derived locally, the flight-recorder is a local Markdown journal, and bishop-memory need not be installed or running. This is the default and requires nothing — a harness that never creates the conf file behaves exactly as it did before bishop-memory existed.
-- **`BISHOP_MEMORY_MODE=central`** — mission IDs come from the `mission_allocate` tool, flight-recorder rows are mirrored to the service continuously via the `state-continuity.sh` hook, and the mission closing sequence reconciles the structured tables in the service at step H. This mode trades local independence for a shared audit trail and mission tracker across multiple harnesses.
+- **`BISHOP_MEMORY_MODE=central`** — mission IDs come from the `mission_allocate` tool, flight-recorder rows and mission steps are mirrored to the service continuously via the `state-continuity.sh` hook, and the mission closing sequence runs the reconciler at step H as a backstop to bring all structured tables into line with the Markdown. This mode trades local independence for a shared audit trail and mission tracker across multiple harnesses.
 
 All the bishop-memory doctrine elsewhere in `.claude/` — ID allocation rules, step H reconciliation, the state-continuity hook — is already inert without the conf file. An agent has no instructions to follow it, and a tool call that refers to the service simply does not happen. So choosing to enable it is a decision made at runtime, not at build time, and reversing it is as simple as deleting the conf file.
 
@@ -138,7 +138,7 @@ All the bishop-memory doctrine elsewhere in `.claude/` — ID allocation rules, 
 | `mission_create` | Create a new mission (standalone mode only). | None (plan-frozen deferral) |
 | `mission_update` | Update mission status/outcome/owner/priority/notes. | None (plan-frozen deferral) |
 | `flight_recorder_append` | Append an audit event. Actor is composed `<BISHOP_HARNESS>:<agent>`. | **YES** (actor) |
-| `mission_step_record` | Record a mission step attempt. Actor is composed `<BISHOP_HARNESS>:<agent>`. | **YES** (actor) |
+| `mission_step_record` | Record a mission step attempt (upserts on `step`; `step` required). Actor is composed `<BISHOP_HARNESS>:<agent>`. | **YES** (actor) |
 | `documents_sync` | Trigger document import from the memory root into the FTS5 index. | None (system action) |
 | `finding_append` | Append a finding to the findings ledger. Always created `proposed`. | None (status is operator-only) |
 | `pattern_append` | Append an advisory pattern. | None |
