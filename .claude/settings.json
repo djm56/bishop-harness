@@ -3,9 +3,6 @@
   "model": "opus",
   "permissions": {
     "deny": [
-      "Edit(.claude/agents/**)",
-      "Edit(.claude/skills/**)",
-      "Edit(.claude/memory/reference/DIRECTIVES.md)",
       "Bash(sed -i:*)",
       "Bash(perl -i:*)"
     ]

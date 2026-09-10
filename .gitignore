@@ -21,6 +21,15 @@ Thumbs.db
 !install-harness.sh
 !INSTALL.md
 
+# Per-environment config and sync state — each harness carries its own identity
+# and sync position. Committing these would cause every clone to collide.
+.claude/bishop-memory.conf
+# Defensive rules: the following are also ignored by .claude/memory/ (line 30 below),
+# but are listed explicitly here so that narrowing the .claude/memory/ rule later
+# does not silently start committing cursor and lock state.
+.claude/memory/state/.bishop-memory-cursor
+.claude/memory/state/.bishop-memory-lock
+
 # Ignore local agent memory files
 .claude/memory/
 .claude/about/
