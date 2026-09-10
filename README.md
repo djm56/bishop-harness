@@ -32,6 +32,7 @@ Bishop's character and rules live in [`.claude/SOUL.md`](.claude/SOUL.md). The o
   - [Current, failed, and finished work](#current-failed-and-finished-work)
   - [What sticks around](#what-sticks-around)
   - [Project directives](#project-directives)
+- [Shared Memory (bishop-memory)](#shared-memory-bishop-memory)
 - [When Things Don't Work](#when-things-dont-work)
 
 ## The Crew
@@ -246,6 +247,38 @@ Where two disagree, `DIRECTIVES.md` wins.
 - **Retire, don't delete.** Withdrawing a rule means setting `Status: deprecated`. The `DIR-NNN` ids are permanent and never reused.
 
 It ships empty, seeded from `memory.zip`. Fill it in as conventions actually emerge — an empty file is better than one full of rules nobody agreed to.
+
+## Shared Memory (bishop-memory)
+
+bishop-memory is an optional local HTTP service that several harnesses can share. It holds missions, steps, findings, patterns, and the audit journal in one place, with an FTS5 search index. If you don't use it, you're not missing anything — the harness owns its memory entirely and derives mission IDs locally by default. With no configuration needed and no external service required, this is how the system works right now.
+
+Central mode is for when you want mission IDs that are unique across every harness, plus a shared audit trail. You get this by running bishop-memory and telling the harness to talk to it.
+
+**To use central mode:**
+
+1. Install bishop-memory from its own repository:
+   - Clone [bishop-memory](https://github.com/djm56/bishop-memory) (or your copy of it).
+   - Follow `docs/INSTALL.md` for your platform. The installer builds the daemon, stages it, and confirms it's running.
+
+2. Set up the harness integration:
+   - Copy `.claude/bishop-memory.conf.example` to `.claude/bishop-memory.conf`.
+   - Edit the new file:
+     - Set `BISHOP_MEMORY_MODE=central`.
+     - Set `BISHOP_HARNESS` to a name unique to this harness (e.g., `harness-client-sdk`, `harness-docs`). This stops two harnesses colliding on a mission ID.
+     - Set `BISHOP_MEMORY_HOME` to the path where you cloned bishop-memory (e.g., `/Users/you/bishop-memory`).
+
+3. Generate the MCP registration:
+   - Run `.claude/connect-bishop-memory.sh`.
+
+4. Restart Claude Code and approve the project-scope MCP server when prompted.
+
+Once it's set up, Bishop uses `mission_allocate` to get IDs from the service instead of deriving them locally, and flight-recorder rows and mission steps are mirrored continuously with the reconciler at mission close acting as a backstop. The harness memory tree still lives on disk — it's always the source of truth.
+
+**Why project scope, not user scope?** A user-scoped MCP server is one global setting shared by every project. If two harnesses in different projects both use the same user-scope registration, they'd both appear to bishop-memory under the same name and collide on mission IDs. Project scope ties the registration to this harness, so each one is distinct.
+
+**To turn it off:** Delete `.claude/bishop-memory.conf`. Everything that depends on it goes inert and the harness is back to standalone mode.
+
+For more: see bishop-memory's `docs/HARNESS-INTEGRATION.md` for the tool surface and `docs/api-contract.md` for the HTTP API.
 
 ## When Things Don't Work
 
