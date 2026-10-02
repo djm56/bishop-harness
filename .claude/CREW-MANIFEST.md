@@ -20,7 +20,7 @@ Running on Claude Code, the pieces sit like this:
 - **Specialists** → the files in [agents/](./agents/), reached by Bishop through the **subagent tool** — named `Task` or `Agent` depending on the Claude Code build. `@agent-name` anywhere in these instructions means "hand it to that subagent through whichever of the two this session exposes."
 - **Skills** → [skills/](./skills/), discovered automatically by Claude Code and invoked with the Skill tool.
 - **Commands** → [commands/](./commands/): `/mission` for the full lifecycle, `/about-setup` for the operator profile. `/mission` runs **in the main session** — that's what lets Bishop delegate outward.
-- **Permissions** → each **subagent** file's `tools:` list; leaving a tool off that list denies it for that subagent, and an agent file carrying no `tools:` line inherits everything rather than being restricted. The primary agent (`@bishop`) is not governed by frontmatter — [CLAUDE.md](../CLAUDE.md) imports `agents/bishop.md` as prose, so its write prohibition is doctrine held by compliance and by the fact that every write is delegated, not a runtime denial.
+- **Permissions** → each **subagent** file's `tools:` list; leaving a tool off that list denies it for that subagent, and an agent file carrying no `tools:` line inherits everything rather than being restricted. The primary agent (`@bishop`) is not governed by frontmatter — [CLAUDE.md](../CLAUDE.md) imports `agents/bishop.md` as prose, so its write prohibition is doctrine held by compliance and by the fact that every write is delegated, not a runtime denial. `@ripley` holds MCP tools for browser control (`mcp__playwright__*`, `mcp__chrome-devtools__*`, `mcp__claude-in-chrome__*`) plus `Edit` and `Write` confined to workspace QA artifacts. She holds **no `Bash`** and **no `Task`**.
 
 ## The Crew
 
@@ -31,6 +31,7 @@ Running on Claude Code, the pieces sit like this:
 | @vasquez | senior developer | subagent | sonnet | **Reserve.** Picks up code after @hicks completes two fix rounds. Never in an initial plan. |
 | @apone | code reviewer | subagent | sonnet | Reads changed files for correctness, security, style, and docs. Holds no shell, so any diff or command output it needs must come from the brief. |
 | @lambert | doc writer | subagent | haiku | READMEs, docblocks, changelogs, API docs, and every state file. |
+| @ripley | QA verification | subagent | opus | Drives a browser to verify rendered work against intent — visual fidelity, functional flow, responsive behaviour, accessibility. Reports findings; never fixes. Terminal, opt-in phase. |
 
 ## Getting Work Started
 

@@ -46,6 +46,11 @@ Written to `.claude/memory/missions/mission-[id]/DEBRIEF.md` when a mission clos
 |-------|---------|--------|-------------------|----------------------|
 | @agent-name | [what went wrong] | [low/med/high + brief note] | [what was done] | [specific safeguard] |
 
+## QA Verdict
+[QA phase was not run] | [QA round N of 2 — verdict: PASS / DEFECT / DEVIATION / OBSERVATION]
+
+Note: This section records Ripley's verdict where the QA phase ran. State explicitly that the phase did not run if it was not invoked for this mission.
+
 ## Findings and Patterns Linked
 - Findings entry refs: [FINDINGS.md heading] | none
 - Pattern entry refs: [PATTERNS.md heading] | none

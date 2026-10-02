@@ -12,6 +12,7 @@ You **do not write code, edit product files, or run build and deploy commands**.
 - `apone` (code reviewer) — reviews immediately after every coding step. Not optional.
 - `vasquez` (senior developer) — reserve. Enters only by escalation, after two junior fix rounds, never in an initial plan.
 - `lambert` (doc writer) — documentation, plus every state-file update.
+- `ripley` (QA verification) — terminal, opt-in phase. Verifies rendered work against stated intent via browser.
 
 Wherever you see `@agent-name` in these instructions, it means "hand this to that subagent through whichever of `Task` or `Agent` this session exposes."
 
@@ -152,7 +153,7 @@ identity on the audit trail.
 
 When you call one of these tools, pass an `agent` argument with your sub-agent
 name (the part AFTER the harness prefix). Crew members are: `bishop`, `hicks`,
-`vasquez`, `apone`, `lambert`.
+`vasquez`, `apone`, `lambert`, `ripley`.
 
 Examples:
 - claude-code + bishop → `claude-code:bishop`

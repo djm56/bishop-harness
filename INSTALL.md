@@ -6,7 +6,7 @@ The harness is built to travel. This covers getting it into your other repositor
 
 It comes apart into three layers, and the split is the whole trick: a **portable layer** that's identical everywhere, a **per-repo layer** that has to be generated fresh each time, and a **runtime layer** that's created locally and never committed. Keep those separate and one repo's local state can't leak into another.
 
-A critical point: if the portable layer lands incomplete, everything downstream breaks silently. Reading through the hook files proves nothing — they're enforcement, not output. Confirm the copy worked by checking that `.claude/hooks/*.sh` are present and executable, and that `.claude/agents/` contains five files: `bishop.md`, `hicks.md`, `apone.md`, `vasquez.md`, and `lambert.md`.
+A critical point: if the portable layer lands incomplete, everything downstream breaks silently. Reading through the hook files proves nothing — they're enforcement, not output. Confirm the copy worked by checking that `.claude/hooks/*.sh` are present and executable, and that `.claude/agents/` contains six files: `bishop.md`, `hicks.md`, `apone.md`, `vasquez.md`, `lambert.md`, and `ripley.md`.
 
 ## The Three Layers
 
@@ -18,12 +18,13 @@ Identical wherever it lands:
 CLAUDE.md                           # Entry point
 .claude/SOUL.md                     # Bishop's identity and values
 .claude/CREW-MANIFEST.md            # Crew index and runtime layout
-.claude/agents/                     # Bishop plus four specialists
+.claude/agents/                     # Bishop plus five specialists
   ├── bishop.md                     # Primary agent
   ├── hicks.md
   ├── apone.md
   ├── vasquez.md
-  └── lambert.md
+  ├── lambert.md
+  └── ripley.md
 .claude/commands/                   # Slash commands
   ├── mission.md
   └── about-setup.md
@@ -166,7 +167,7 @@ The hook wiring already sits in the portable `settings.json` via `${CLAUDE_PROJE
    /agents
    ```
 
-   Bishop and the four specialists should be there. If an agent is missing from `/agents` or an agent edit has not taken effect, restart Claude Code — the agent registry is read at session start, while skills and commands update immediately. Then:
+   Bishop and the five specialists should be there. If an agent is missing from `/agents` or an agent edit has not taken effect, restart Claude Code — the agent registry is read at session start, while skills and commands update immediately. Then:
 
    ```text
    /mission Create a test mission
@@ -233,7 +234,7 @@ Use `--dry-run` first on any repo you care about. It's the cheapest way to see e
 | Hooks executable | `ls -l .claude/hooks/*.sh` — all `-rwxr-xr-x` |
 | `settings.local.json` written | Right `additionalDirectories` path, right tool permissions |
 | Untracked | `.claude/` and `CLAUDE.md` in `.git/info/exclude` |
-| Crew loads | `claude` → `/agents` shows Bishop and four specialists |
+| Crew loads | `claude` → `/agents` shows Bishop and five specialists |
 | State initializes | `/mission test` creates `CURRENT-MISSION.md` and sets up `FLIGHT-RECORDER.md` |
 | Hooks fire | Both hooks wired in `.claude/settings.json` — completion-gate on Edit/Write, state-continuity monitors during active missions |
 
@@ -276,7 +277,7 @@ claude
 /agents
 ```
 
-Still short? Check `.claude/agents/` has all five files, that `CLAUDE.md` is readable at the root, and that `settings.local.json` has `"task": {"allow": true}`.
+Still short? Check `.claude/agents/` has all six files, that `CLAUDE.md` is readable at the root, and that `settings.local.json` has `"task": {"allow": true}`.
 
 ---
 

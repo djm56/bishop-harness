@@ -4,7 +4,7 @@ A small crew of AI agents with a chain of command, for Claude Code.
 
 > "Is this gonna be a stand-up fight, sir, or another bug hunt?" — Private Hudson, *Aliens*
 
-One agent is in charge. **Bishop** plans the work, hands each piece to whoever should own it, checks what comes back, and closes the loop — and never writes a line of code. Everything else is done by specialists: a junior who builds, a reviewer who checks, a senior held in reserve, and a writer who keeps the docs and the state files straight.
+One agent is in charge. **Bishop** plans the work, hands each piece to whoever should own it, checks what comes back, and closes the loop — and never writes a line of code. Everything else is done by specialists: a junior who builds, a reviewer who checks, a senior held in reserve, a QA verifier who checks rendered work against the design, and a writer who keeps the docs and the state files straight.
 
 The point is not the roleplay. It's that work gets planned before it gets built, reviewed before it ships, and written down as it goes — so a session can be interrupted and picked up later without anyone reconstructing what was happening.
 
@@ -44,6 +44,7 @@ Bishop's character and rules live in [`.claude/SOUL.md`](.claude/SOUL.md). The o
 | `@apone` | code reviewer | Reads every diff. Reports findings, never rewrites. Runs after each coding step. | "I'm not here to make you feel good about it. I'm here to tell you what's wrong with it." |
 | `@vasquez` | senior developer | In reserve. Arrives only by escalation, never in the plan. | "You called me. So it's already gone wrong twice." |
 | `@lambert` | doc writer | Documentation, plus every update to the state files. | "If it isn't written down, it didn't happen." |
+| `@ripley` | QA verification | Verifies rendered work against intent via browser — visual fidelity, flow, responsiveness, accessibility. Reports; never fixes. Terminal, opt-in. | "I say we check it. It's the only way to be sure." |
 
 Bishop loads automatically from [`CLAUDE.md`](CLAUDE.md) at the repo root. The rest sit in [`.claude/agents/`](.claude/agents/) and get called through the subagent tool — named `Task` or `Agent` depending on the Claude Code build.
 
@@ -51,12 +52,14 @@ The senior developer (`@vasquez`) is the one people query. The senior developer 
 
 ## Aboard the Sulaco
 
-The crew are drawn from the *Sulaco*, the ship from *Aliens* — Bishop its synthetic executive officer, Apone its sergeant, Hicks its corporal, and Vasquez its smartgunner. Lambert is the exception, arriving from the *Nostromo* of the earlier film *Alien*: she brings the discipline of keeping the ship's log and knowing exactly where you are, which is what the doc writer does — carries the record forward, keeps the continuity honest.
+The crew are drawn from the *Alien* franchise. Bishop, Apone, Hicks, and Vasquez come from the *Sulaco* of *Aliens* — the ship, the sergeant, the corporal, and the smartgunner. Ripley bridges both films: she appears in both *Alien* (the Nostromo) and *Aliens* (the Sulaco), making her the warrant officer who knows how to survive. Lambert arrives from the *Nostromo* in the earlier film, bringing that same discipline of keeping the ship's log and knowing exactly where you are — carries the record forward, keeps the continuity honest.
 
 - **Apone** — "Look into my eye." — *Aliens*
 - **Hicks** — "Stay frosty." — *Aliens*
 - **Vasquez** — "Let's rock." — *Aliens*
 - **Bishop** — "I may be synthetic, but I'm not stupid." — *Aliens*
+- **Ripley** — "Get away from her, you bitch." — *Aliens*
+- **Lambert** — "I'm the only one who cares about the other ship." — *Alien*
 
 ## Getting Set Up
 
@@ -118,7 +121,7 @@ Once per machine. After that the session comes back on its own.
 /agents
 ```
 
-You're looking for `bishop`, `hicks`, `apone`, `vasquez`, and `lambert`. Or just ask:
+You're looking for `bishop`, `hicks`, `apone`, `vasquez`, `lambert`, and `ripley`. Or just ask:
 
 ```text
 @bishop report crew status
@@ -319,7 +322,7 @@ If an agent file exists in `.claude/agents/` but does not appear in `/agents`, o
 
 If the restart does not resolve it:
 
-1. Check `.claude/agents/` exists and has all five files in it.
+1. Check `.claude/agents/` exists and has all six files in it.
 2. Run `claude doctor`.
 
 ---

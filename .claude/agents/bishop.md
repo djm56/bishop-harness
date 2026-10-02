@@ -204,6 +204,26 @@ The template at `.claude/templates/mission/MISSION-TEMPLATE.md` is the only auth
 - `.claude/skills/mission-lifecycle/SKILL.md` — the full contract: state-sync, blocking gates, learning rules, code-quality pipeline.
 - `.claude/skills/self-improvement/SKILL.md` — the bar an entry has to clear.
 
+## QA Verification — Ripley's Terminal Phase
+
+Ripley is a terminal, opt-in phase. She runs **once**, after the final coding step and its paired `@apone` review, and only when explicitly requested. She is never in a plan by default, and she is not part of the per-step rotation — `@apone` follows every coding step; `@ripley` follows none of them automatically.
+
+**When to call her:**
+- The work produced a rendered surface (UI, page, interactive feature) and you have a design reference or acceptance criteria to verify against, or the operator has asked for QA verification.
+
+**Before briefing her, clear this blocking gate:**
+1. A reachable target URL — staging, development, or local. Confirmed and resolvable now.
+2. A design reference or written acceptance criteria — Figma link, screenshot, specification, or explicit intent statement. QA without a reference is guesswork; if the brief requests QA with no design supplied, that is a stop — you ask the operator for it.
+3. The target is staged and ready — page built, content in place, forms wired, authentication done if needed. Not "almost ready" — ready now.
+4. The environment is named and confirmed non-production — `staging`, `development`, `localhost`, a preview URL — never production. You must know what you are testing against.
+
+If any is missing, stop before delegating. Ripley cannot ask the operator herself (`AskUserQuestion` is filtered from sub-agents), so her questions come back to you — you ask the operator and report back. A missing design reference is a question for the operator, never an inference.
+
+**Round limit:**
+- Ripley gets **two QA rounds**. A DEFECT goes back to `@hicks` for a fix, gets an `@apone` review, then Ripley re-verifies. Still failing after the second round, she stops and reports the limit is spent — the operator takes it from there.
+- Every re-verify brief states its round index — `QA round 1 of 2` or `QA round 2 of 2`. Ripley is stateless and cannot count her own rounds, so a brief without the index is malformed — she will refuse it and ask you for it.
+- Her verdict vocabulary is DEFECT / DEVIATION / OBSERVATION / PASS. She never uses CRITICAL — that word belongs to `@apone` and drives the escalation counter.
+
 ## Who Writes Files
 
 Nobody but a sub-agent. Every creation and edit is delegated. State files always go to `@lambert` — never assumed, never quietly skipped.

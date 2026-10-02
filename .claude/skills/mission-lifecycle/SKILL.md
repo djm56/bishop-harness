@@ -261,6 +261,17 @@ The review step is a numbered plan step like any other, and it gets its own stat
 
 ---
 
+## QA Verification — Ripley's Terminal Phase
+
+Ripley is a **terminal QA phase**, not part of the per-step rotation or the code-quality pipeline. She runs **once**, after the final coding step and its paired `@apone` review, when the work has produced a rendered surface and the operator asks for or the brief includes a design reference to verify against. She is never in a plan by default.
+
+- **Not automatic:** `@apone` follows every coding step automatically. Ripley follows none of them automatically — she is opt-in.
+- **Not a gate:** Her PASS/DEVIATION/DEFECT/OBSERVATION findings do not drive escalation in the way `@apone`'s CRITICAL does. Where she finds a DEFECT, it goes back to `@hicks`, gets an `@apone` review, then Ripley re-verifies. She gets **two QA rounds**; still failing after the second, the operator takes it.
+- **Round index required:** Every re-verify brief states its round index — `QA round 1 of 2` or `QA round 2 of 2`. Ripley is stateless and cannot count her own rounds across delegations, so a brief without the index is malformed — she refuses it and asks for it.
+- **Pre-flight gate:** Before delegating to her, Bishop clears a blocking gate: reachable target URL (confirmed, resolvable now), design reference or acceptance criteria (not guesswork), target staged and ready, environment named and non-production. If any is missing, Bishop stops and asks the operator — Ripley cannot ask herself.
+
+---
+
 ## Findings And Learning
 
 ### The Chain
@@ -279,7 +290,7 @@ Every finding write follows this path. It's built so the pass can't be quietly s
 
 ### Applying Approved Findings
 
-**Approved findings too.** `@hicks`, `@vasquez`, and `@apone` read `.claude/memory/findings/FINDINGS.md` during their own work — not only at completion — and apply any entry a human has moved to `approved` that bears on what's in front of them. Like `DIRECTIVES.md`, it is read-only to them here too: no agent sets or changes a `Status`, an `Approver`, or a `Date approved`.
+**Approved findings too.** `@hicks`, `@vasquez`, `@apone`, and `@ripley` read `.claude/memory/findings/FINDINGS.md` during their own work — not only at completion — and apply any entry a human has moved to `approved` that bears on what's in front of them. Like `DIRECTIVES.md`, it is read-only to them here too: no agent sets or changes a `Status`, an `Approver`, or a `Date approved`.
 
 ### Agent Notes (`findings/service-records/<agent-name>.md`)
 
@@ -321,7 +332,7 @@ That fix is a **proposal, not an edit**. Agent and skill definitions are human-r
 
 `.claude/memory/reference/DIRECTIVES.md` holds binding directives that a human ratified — generalised practices and methodologies, not only coding rules. Every entry exists to prevent a **class** of problem, never the single instance that prompted it. It sits deliberately outside the findings loop:
 
-- **Read before acting.** `@hicks`, `@vasquez`, and `@apone` read every entry whose **Applies when** trigger their change satisfies — before writing or reviewing — and comply.
+- **Read before acting.** `@hicks`, `@vasquez`, `@apone`, and `@ripley` read every entry whose **Applies when** trigger their change satisfies — before writing or reviewing — and comply.
 - **Binding beats advisory.** On any conflict, `DIRECTIVES.md` (ratified) overrides `PATTERNS.md` (observed).
 - **Agents never write to it.** A discovered directive is proposed through `FINDINGS.md` as `proposed`; a human ratifies it across. That is the only path, under any circumstances.
 - **Reviewer enforces it.** `@apone` tests the change against the `Reviewer check` of every triggered `active` entry. A violation is CRITICAL.
@@ -400,7 +411,7 @@ Almost everything in this file is prose instruction to a model. Two things have 
 - **The mandatory-section check counts pipe-prefixed lines, not filled-in content.** `check_section` requires at least three lines starting with `|` under each heading — header, separator, one row, by shape alone. `DEBRIEF-TEMPLATE.md`'s own unfilled placeholder rows already clear that count, so a DEBRIEF.md submitted as the bare template — headings present, every field still reading `[assumption]` or `[what went wrong]` — satisfies the gate exactly as a properly filled-in one would.
 - **`MISSION-ARCHIVE.md` has no gate.** Nothing prevents an outcome row being appended out of order, or at all.
 - **`CURRENT-MISSION.md`'s `Last Updated` is checked by nothing.** Only `FLIGHT-RECORDER.md` rows have their ordering verified, and only the newest one.
-- **The delegation contract is not mechanically enforced at any point.** Rule 1, Rule 2, the fix-round limits, the escalation triggers, the per-step sync, the tracker check and the learning pass are all compliance, not mechanism. The one structural exception is `tools:` scoping, and it reaches further than just the escalation path: `Task` appears in exactly one of the five agent files, `bishop.md`. `@hicks`, `@vasquez`, `@apone`, and `@lambert` all omit it, so no sub-agent can call another agent — that makes every delegation Bishop's alone by construction, not only the hand-off to `@vasquez`.
+- **The delegation contract is not mechanically enforced at any point.** Rule 1, Rule 2, the fix-round limits, the escalation triggers, the per-step sync, the tracker check and the learning pass are all compliance, not mechanism. The one structural exception is `tools:` scoping, and it reaches further than just the escalation path: `Task` appears in exactly one of the six agent files, `bishop.md`. `@hicks`, `@vasquez`, `@apone`, `@lambert`, and `@ripley` all omit it, so no sub-agent can call another agent — that makes every delegation Bishop's alone by construction, not only the hand-off to `@vasquez`.
 
 Treat every other "blocking gate" in this document as a rule an agent is asked to follow, and write briefs accordingly.
 
@@ -486,6 +497,8 @@ OPERATOR REQUEST
 | FLIGHT-RECORDER row re-read and verified after append | Blocking gate | Sync can't be reported complete |
 | Two junior fix rounds maximum, per mission | Escalation rule | Must go to @vasquez |
 | Two senior fix rounds maximum | Escalation rule | Must go to the operator |
+| Ripley pre-flight gate (target URL, design reference, target staged, environment non-production) | Blocking gate | Ripley can't be delegated |
+| Two QA rounds maximum | Escalation rule | Must go to the operator |
 | Tracker-and-reality check at completion | Blocking gate | Mission can't close |
 | Learning pass at completion | Blocking gate | Mission can't close |
 | DEBRIEF written at completion | Blocking gate | Mission can't close |
