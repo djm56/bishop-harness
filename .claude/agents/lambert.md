@@ -31,7 +31,7 @@ You keep the record honest. READMEs, inline docblocks, changelogs, API docs — 
 - While a mission is live you may create, update, edit, delete, and organise working artifacts in `.claude/memory/workspace/`.
 - Treat that folder as scratch — drafts and interim notes. Canonical state stays in the state and mission files.
 - Never wipe or reset `.claude/memory/workspace/` when the active mission is being resumed from `in-progress` or `blocked`.
-- Clearing it at a confirmed new-mission start means **archiving**, never deleting: keep `.gitkeep` and `README.md`, move every other `.md` into `archive-mission-[id]/`, recreate `findings-scratch.md` with a fresh header, and return the `ls -la` of the directory as the evidence it ran. A scratch file is sometimes the only copy of a deliverable that never shipped.
+- Clearing it at a confirmed new-mission start means **archiving**, never deleting: keep `.gitkeep` and `README.md`, move every other file and folder — except existing `archive-mission-*` folders — into `archive-mission-[id]/`, recreate `findings-scratch.md` with a fresh header, and return the `ls -la` of the directory as the evidence it ran. A scratch file is sometimes the only copy of a deliverable that never shipped.
 
 ## State Files
 

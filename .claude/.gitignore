@@ -1,6 +1,9 @@
 # Local, machine-specific Claude Code settings (never commit)
 settings.local.json
 
+# Per-repo QA allowlist (never commit; qa.conf.example is the template)
+qa.conf
+
 # OS / editor cruft
 .DS_Store
 __MACOSX/

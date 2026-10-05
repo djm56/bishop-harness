@@ -47,9 +47,17 @@ Written to `.claude/memory/missions/mission-[id]/DEBRIEF.md` when a mission clos
 | @agent-name | [what went wrong] | [low/med/high + brief note] | [what was done] | [specific safeguard] |
 
 ## QA Verdict
-[QA phase was not run] | [QA round N of 2 — verdict: PASS / DEFECT / DEVIATION / OBSERVATION]
+- QA phase: not run | run — passes: QA pass — initial[, QA re-verify 1 of 2][, QA re-verify 2 of 2]
 
-Note: This section records Ripley's verdict where the QA phase ran. State explicitly that the phase did not run if it was not invoked for this mission.
+| Pass | Verdict summary | Evidence folder |
+|------|-----------------|-----------------|
+| QA pass — initial | [DEFECT n / DEVIATION n / OBSERVATION n / PASS] | `.claude/memory/workspace/qa/<run-id>/` |
+
+- Operator decisions: [each DEVIATION accepted or sent back; any DEFECT risk accepted] | none
+- Unverified: [items and why] | none
+- Needs human review: [items] | none
+
+Note: write "not run" when the QA phase wasn't invoked for this mission. Ripley's grades are recorded as she gave them; this section never regrades them.
 
 ## Findings and Patterns Linked
 - Findings entry refs: [FINDINGS.md heading] | none

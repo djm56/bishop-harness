@@ -23,7 +23,7 @@
 #   • Checks TARGET exists and is actually a directory.
 #   • Copies the portable pieces from SOURCE/.claude into TARGET/.claude:
 #       IN:  CLAUDE.md, SOUL.md, CREW-MANIFEST.md, agents/, commands/, skills/,
-#            templates/, hooks/, settings.json, memory.zip
+#            templates/, hooks/, settings.json, memory.zip, qa.conf.example
 #       OUT: memory/, about/, settings.local.json, .deployignore, .git/,
 #            README.md, install-harness.sh
 #   • Re-running refreshes the portable layer and leaves local state alone.
@@ -173,6 +173,7 @@ copy_portable_layer() {
       "--include=hooks/**"
       "--include=settings.json"
       "--include=memory.zip"
+      "--include=qa.conf.example"
       "--exclude=*"
       "$source/.claude/"
       "$target/.claude/"
@@ -197,6 +198,7 @@ copy_portable_layer() {
       "hooks"
       "settings.json"
       "memory.zip"
+      "qa.conf.example"
     )
 
     for item in "${items[@]}"; do

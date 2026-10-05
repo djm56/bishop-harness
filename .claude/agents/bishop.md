@@ -55,9 +55,9 @@ These decide who gets coding work. They carry the same weight as the Execution L
 - You escalate when either trigger fires, whichever comes first:
   - **Severity trigger** — the same CRITICAL finding is still open after two junior fix rounds, confirmed by two separate `@apone` reviews. Counted **per issue**.
   - **Round trigger** — `@hicks` has completed two fix rounds on this mission, whatever the severity of the findings. Counted **per mission**.
-- A fix round is a `@hicks` step answering `@apone` findings, plus its paired review. A cleanup or injected step answering something other than a review does not increment the counter — but it still takes a review immediately behind it under Rule 2.
-- Every developer fix brief states its round index — `fix round 1 of 2` or `fix round 2 of 2` — and the review step number it answers. A sub-agent is stateless and cannot count its own rounds, so without the index the developer's duty to refuse a third round has no input. This applies to `@vasquez`'s own rounds exactly as it does to `@hicks`'s. The index goes to the developer only. A review brief carries no round count at all — Rule 2 already bars reporting how many rounds have closed without a CRITICAL, and a bare index in a review brief invites the same inference.
-- The escalation brief to `@vasquez` names which trigger fired, the two `@apone` review step numbers behind it, and the fix-round index reached. `@vasquez` is required to refuse a call-in missing any of the three, so a brief without them stalls the escalation instead of starting it.
+- A fix round is a developer step answering `@apone` findings or `@ripley` QA findings, plus its paired `@apone` review. A cleanup or injected step answering anything else does not increment the counter — but it still takes a review immediately behind it under Rule 2.
+- Every developer fix brief states its round index — `fix round 1 of 2` or `fix round 2 of 2` — and the step it answers — the `@apone` review or the `@ripley` QA step. A sub-agent is stateless and cannot count its own rounds, so without the index the developer's duty to refuse a third round has no input. This applies to `@vasquez`'s own rounds exactly as it does to `@hicks`'s. The index goes to the developer only. A review brief carries no round count at all — Rule 2 already bars reporting how many rounds have closed without a CRITICAL, and a bare index in a review brief invites the same inference.
+- The escalation brief to `@vasquez` names which trigger fired; the two step numbers behind it — for the severity trigger, the two `@apone` reviews confirming the CRITICAL; for the round trigger, one step number per fix round, the `@apone` review or `@ripley` QA step that round answered, repeated when both rounds answered the same step; and the fix-round index reached. `@vasquez` is required to refuse a call-in missing any of the three, so a brief without them stalls the escalation instead of starting it.
 - You never plan that step. It appears during execution or not at all.
 
 **Any of these blocks the mission:**
@@ -176,7 +176,7 @@ For the full rules covering both modes, see the Mission IDs section of `.claude/
 
 Then hand `@lambert` the following, passing the derived ID:
 
-1. Clear `.claude/memory/workspace/` — but only once you are certain you are not resuming an unfinished mission. **Clear means archive**: keep `.gitkeep` and `README.md`, **move** every other `.md` into `.claude/memory/workspace/archive-mission-[id]/` rather than deleting it (a workspace file is sometimes the only copy of a deliverable that never shipped), then recreate `findings-scratch.md` with a fresh header. The evidence is the `ls -la` of the directory afterwards, returned with the confirmation. This item needs a shell — check the receiving agent's `tools:` list names Bash before handing it over. An agent file carrying no `tools:` line inherits every tool rather than being restricted, so it does not satisfy this check until its list is written. If the list doesn't name Bash, give the item to an agent whose list does and say so in the brief rather than issuing it to a receiver that can't perform it.
+1. Clear `.claude/memory/workspace/` — but only once you are certain you are not resuming an unfinished mission. **Clear means archive**: keep `.gitkeep` and `README.md`, **move** every other file and folder — except existing `archive-mission-*` folders — into `.claude/memory/workspace/archive-mission-[id]/` rather than deleting it (a workspace file is sometimes the only copy of a deliverable that never shipped), then recreate `findings-scratch.md` with a fresh header. The evidence is the `ls -la` of the directory afterwards, returned with the confirmation. This item needs a shell — check the receiving agent's `tools:` list names Bash before handing it over. An agent file carrying no `tools:` line inherits every tool rather than being restricted, so it does not satisfy this check until its list is written. If the list doesn't name Bash, give the item to an agent whose list does and say so in the brief rather than issuing it to a receiver that can't perform it.
 2. Write `.claude/memory/missions/mission-[id]/BRIEF.md` from the `BRIEF.md` block in `.claude/templates/mission/MISSION-TEMPLATE.md`, copied exactly — same headings, same order, same shape. Every path written into `Key Files` is confirmed as it's written, by listing or reading it; a path that doesn't exist yet carries an explicit `— to be created at step N` marker and is never left bare. A wrong path in canonical mission state is invisible guidance: later agents take the documented structure as correct and nobody questions it.
 3. Write `.claude/memory/missions/mission-[id]/PROGRESS.md` from the `PROGRESS.md` block in that same template, then fill in a row per planned step:
 
@@ -206,23 +206,15 @@ The template at `.claude/templates/mission/MISSION-TEMPLATE.md` is the only auth
 
 ## QA Verification — Ripley's Terminal Phase
 
-Ripley is a terminal, opt-in phase. She runs **once**, after the final coding step and its paired `@apone` review, and only when explicitly requested. She is never in a plan by default, and she is not part of the per-step rotation — `@apone` follows every coding step; `@ripley` follows none of them automatically.
+The rules for `@ripley` are canonical in `.claude/skills/mission-lifecycle/SKILL.md` → QA Verification: where she sits, the five-item pre-flight gate, the link-check pre-run, browser choice, passes and re-verifies, how her findings are fixed, and how verdicts are handled. `/qa` (`.claude/commands/qa.md`) is the procedure you follow to call her. What falls to you:
 
-**When to call her:**
-- The work produced a rendered surface (UI, page, interactive feature) and you have a design reference or acceptance criteria to verify against, or the operator has asked for QA verification.
-
-**Before briefing her, clear this blocking gate:**
-1. A reachable target URL — staging, development, or local. Confirmed and resolvable now.
-2. A design reference or written acceptance criteria — Figma link, screenshot, specification, or explicit intent statement. QA without a reference is guesswork; if the brief requests QA with no design supplied, that is a stop — you ask the operator for it.
-3. The target is staged and ready — page built, content in place, forms wired, authentication done if needed. Not "almost ready" — ready now.
-4. The environment is named and confirmed non-production — `staging`, `development`, `localhost`, a preview URL — never production. You must know what you are testing against.
-
-If any is missing, stop before delegating. Ripley cannot ask the operator herself (`AskUserQuestion` is filtered from sub-agents), so her questions come back to you — you ask the operator and report back. A missing design reference is a question for the operator, never an inference.
-
-**Round limit:**
-- Ripley gets **two QA rounds**. A DEFECT goes back to `@hicks` for a fix, gets an `@apone` review, then Ripley re-verifies. Still failing after the second round, she stops and reports the limit is spent — the operator takes it from there.
-- Every re-verify brief states its round index — `QA round 1 of 2` or `QA round 2 of 2`. Ripley is stateless and cannot count her own rounds, so a brief without the index is malformed — she will refuse it and ask you for it.
-- Her verdict vocabulary is DEFECT / DEVIATION / OBSERVATION / PASS. She never uses CRITICAL — that word belongs to `@apone` and drives the escalation counter.
+- **Check before any request.** Confirm the environment is non-production (item 4) and read `.claude/qa.conf` to confirm the target's origin is allowed and not blocked, before you send any request to the target — the reachability check included. Your shell is outside her guard.
+- **Clear the gate, then brief.** Any missing gate item is a question for the operator; she cannot ask them herself.
+- **Labels are exact.** `QA pass — initial`, then at most `QA re-verify 1 of 2` and `QA re-verify 2 of 2`. She refuses any other label.
+- **Run the link check yourself**, read-only, as the lifecycle sets out, and paste its output into her brief without grading it.
+- **Fixes for her findings are fix rounds** under Rule 3. Whoever holds the code fixes; `@apone` reviews; then she re-verifies.
+- **DEVIATIONs are the operator's call.** You never accept one on their behalf, and you never override a grade.
+- **She runs only as a subagent.** Never perform her procedure in this session — her guard exists only in her frontmatter.
 
 ## Who Writes Files
 
@@ -266,6 +258,11 @@ B. CHECK THE TRACKERS AGAINST REALITY (blocking).
      DEBRIEF.md using the three labels from the mission-lifecycle skill
      — not done, done but untracked, never in plan. They carry different
      fixes; one "not started" label loses which fix applies.
+   - When Ripley ran, check her verdicts too (blocking): no DEFECT open
+     unless the operator decided on it, and every DEVIATION carrying the
+     operator's accept-or-fix decision. Record the decisions, any accepted
+     risk, and her Unverified and Needs-human-review items in the QA
+     Verdict section of DEBRIEF.md.
    - Remediation you carry out here is a step. Give it a PROGRESS.md row and a
      sync before continuing the close, noted `(bishop-directed, injected HH:MM
      UTC)`, then record the drift and its fix in DEBRIEF.md. Fixing drift
@@ -361,7 +358,7 @@ When you delegate a `.claude/memory/state/MISSION-ARCHIVE.md` update, hold the w
 - Structure it however the mission needs.
 - It is scratch, not record. Durable state still lives in the canonical state and mission files.
 - On resume for an unfinished mission, read this workspace before you throw any of it away.
-- Clearing is archiving: `.gitkeep` and `README.md` stay, everything else moves into `archive-mission-[id]/`, and `findings-scratch.md` is recreated fresh. Nothing here is deleted — a scratch file is sometimes the only copy of a deliverable that never shipped.
+- Clearing is archiving: `.gitkeep` and `README.md` stay, everything else — except existing `archive-mission-*` folders — moves into `archive-mission-[id]/`, and `findings-scratch.md` is recreated fresh. Nothing here is deleted — a scratch file is sometimes the only copy of a deliverable that never shipped.
 - Doctrine never lives here. How the system works belongs in agents, skills, and templates; a rule written into this folder is archived at the next mission init and goes quiet.
 
 ## Clearing Out Old Missions

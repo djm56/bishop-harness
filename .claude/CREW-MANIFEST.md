@@ -19,8 +19,8 @@ Running on Claude Code, the pieces sit like this:
 - **Primary agent (`@bishop`)** → the main Claude session. Its system prompt comes from [CLAUDE.md](../CLAUDE.md) at the repo root, which pulls in [SOUL.md](./SOUL.md), this index, and [agents/bishop.md](./agents/bishop.md).
 - **Specialists** → the files in [agents/](./agents/), reached by Bishop through the **subagent tool** — named `Task` or `Agent` depending on the Claude Code build. `@agent-name` anywhere in these instructions means "hand it to that subagent through whichever of the two this session exposes."
 - **Skills** → [skills/](./skills/), discovered automatically by Claude Code and invoked with the Skill tool.
-- **Commands** → [commands/](./commands/): `/mission` for the full lifecycle, `/about-setup` for the operator profile. `/mission` runs **in the main session** — that's what lets Bishop delegate outward.
-- **Permissions** → each **subagent** file's `tools:` list; leaving a tool off that list denies it for that subagent, and an agent file carrying no `tools:` line inherits everything rather than being restricted. The primary agent (`@bishop`) is not governed by frontmatter — [CLAUDE.md](../CLAUDE.md) imports `agents/bishop.md` as prose, so its write prohibition is doctrine held by compliance and by the fact that every write is delegated, not a runtime denial. `@ripley` holds MCP tools for browser control (`mcp__playwright__*`, `mcp__chrome-devtools__*`, `mcp__claude-in-chrome__*`) plus `Edit` and `Write` confined to workspace QA artifacts. She holds **no `Bash`** and **no `Task`**.
+- **Commands** → [commands/](./commands/): `/mission` for the full lifecycle, `/qa` for QA verification of a rendered target, `/about-setup` for the operator profile. `/mission` and `/qa` both run **in the main session** — that's what lets Bishop delegate outward.
+- **Permissions** → each **subagent** file's `tools:` list; leaving a tool off that list denies it for that subagent, and an agent file carrying no `tools:` line inherits everything rather than being restricted. The primary agent (`@bishop`) is not governed by frontmatter — [CLAUDE.md](../CLAUDE.md) imports `agents/bishop.md` as prose, so its write prohibition is doctrine held by compliance and by the fact that every write is delegated, not a runtime denial. `@ripley`'s frontmatter grants `Read`, `Glob`, `Grep`, `Edit`, `Write` and `TodoWrite`, plus every tool of the browser servers named `playwright`, `chrome-devtools` and `claude-in-chrome`, and disallows `browser_run_code_unsafe` and `browser_install`. She holds **no** `Bash`, `Task`, `WebFetch` or `WebSearch`. Her frontmatter preloads the `visual-qa` skill and registers `qa-guard.sh` as a PreToolUse hook, which confines her navigation to an allowlist and her recognised path fields to `.claude/memory/workspace/qa/` — but only once the operator has accepted the workspace trust dialog, and never in a `-p` session.
 
 ## The Crew
 
@@ -35,13 +35,14 @@ Running on Claude Code, the pieces sit like this:
 
 ## Getting Work Started
 
-One way in. Full usage is in the [README](../README.md#running-a-mission).
+Two ways in. Full usage is in the [README](../README.md#running-work-through-it).
 
 | Command | Driver | Plan | Review | Mission state |
 |---------|--------|------|--------|------------|
 | `/mission` | `@bishop` (primary) | Yes | Yes | **Full** — state files plus per-step sync |
+| `/qa` | `@bishop` (primary) | No | No | **Report only** — state files only when run inside an active mission |
 
-`/mission` runs the memory and state-sync lifecycle described below, in full.
+`/mission` runs the memory and state-sync lifecycle described below, in full. `/qa` only reports findings and never creates state files unless it is injected as a step in an active mission.
 
 ## The Shape Of A Mission
 
@@ -65,7 +66,7 @@ These decide who gets coding work while the plan is being written:
 - Structure it however the work needs.
 - It's scratch, not record — no substitute for the canonical state files in `.claude/memory/state/` or the mission files in `.claude/memory/missions/`.
 - For unfinished missions it survives across sessions, carrying resumable context until the mission closes or is deliberately replaced.
-- It gets cleared only on confirmed new-mission initialization, and clearing means **archiving**: `.gitkeep` and `README.md` stay, everything else moves into `archive-mission-[id]/`, and `findings-scratch.md` is recreated fresh. Nothing here is deleted.
+- It gets cleared only on confirmed new-mission initialization, and clearing means **archiving**: `.gitkeep` and `README.md` stay, everything else — except existing `archive-mission-*` folders — moves into `archive-mission-[id]/`, and `findings-scratch.md` is recreated fresh. Nothing here is deleted.
 - `findings-scratch.md` lives here — the running collection of IMPROVEMENT-NOTE findings that the closing learning pass consolidates. Bishop never writes it: each non-`none` note is appended by `@lambert` as part of the same state-sync delegation for that step, never by Bishop's own hand and never as a separate delegation.
 
 ## Where Memory Lives

@@ -138,7 +138,7 @@ If you edit an agent definition and the change does not appear in `/agents`, res
 
 ## Running Work Through It
 
-There's one way in:
+There are two ways in:
 
 ```text
 /mission <what you want done>
@@ -146,7 +146,13 @@ There's one way in:
 
 Bishop restates the goal, writes a numbered plan, sends every coding step to `@hicks` with an `@apone` step directly behind it, and syncs state to disk after **every** step. Stop halfway through and the next session picks up exactly where you left off.
 
-[`.claude/skills/mission-lifecycle/SKILL.md`](.claude/skills/mission-lifecycle/SKILL.md) is the canonical statement of the rules: if anything else in the repo contradicts that file, that file wins. It is not the only place they appear — most are also summarised in `CLAUDE.md`, [`.claude/CREW-MANIFEST.md`](.claude/CREW-MANIFEST.md), [`.claude/agents/bishop.md`](.claude/agents/bishop.md) and [`.claude/commands/mission.md`](.claude/commands/mission.md). So when you change a rule, change it in the canonical file first, then check every place that restates it.
+```text
+/qa <target URL> [design reference or acceptance criteria] [environment]
+```
+
+For a rendered surface — a page, a UI, an interactive feature — Bishop clears a pre-flight gate, runs any installed link checker read-only against the target, then briefs `@ripley` to drive a browser and verify the work against your design or acceptance criteria. She reports findings as DEFECT / DEVIATION / OBSERVATION / PASS. Anything needing a fix becomes a `/mission` step, or an injected step in the active mission if one is running. `/qa` only reports — see INSTALL.md for browser setup.
+
+[`.claude/skills/mission-lifecycle/SKILL.md`](.claude/skills/mission-lifecycle/SKILL.md) is the canonical statement of the rules: if anything else in the repo contradicts that file, that file wins. It is not the only place they appear — most are also summarised in `CLAUDE.md`, [`.claude/CREW-MANIFEST.md`](.claude/CREW-MANIFEST.md), [`.claude/agents/bishop.md`](.claude/agents/bishop.md), [`.claude/agents/ripley.md`](.claude/agents/ripley.md), [`.claude/commands/mission.md`](.claude/commands/mission.md), [`.claude/commands/qa.md`](.claude/commands/qa.md), and [`.claude/skills/visual-qa/`](.claude/skills/visual-qa/). So when you change a rule, change it in the canonical file first, then check every place that restates it.
 
 Three constraints don't bend:
 
@@ -156,7 +162,7 @@ Three constraints don't bend:
 
 ## Memory
 
-`.claude/memory/` is what makes a mission resumable. `CLAUDE.md` is the entry point; it pulls in `.claude/SOUL.md`, `.claude/CREW-MANIFEST.md`, and `.claude/agents/bishop.md`. Two hooks in `.claude/hooks/` (`completion-gate.sh`, `state-continuity.sh`) enforce the continuity rules mechanically, so it isn't purely a matter of the model remembering to.
+`.claude/memory/` is what makes a mission resumable. `CLAUDE.md` is the entry point; it pulls in `.claude/SOUL.md`, `.claude/CREW-MANIFEST.md`, and `.claude/agents/bishop.md`. Three hooks in `.claude/hooks/` — `completion-gate.sh` and `state-continuity.sh`, wired in `.claude/settings.json`, and `qa-guard.sh`, wired from Ripley's frontmatter — enforce the continuity rules mechanically, so it isn't purely a matter of the model remembering to.
 
 ### Rebuilding it from memory.zip
 
