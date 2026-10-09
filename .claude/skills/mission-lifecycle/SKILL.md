@@ -417,7 +417,7 @@ Once every step is done, in this exact order:
    - 4a. [ ] Bishop reads `.claude/memory/workspace/findings-scratch.md` — the notes collected as the steps ran. That list *is* the input; the pass consolidates it rather than recalling it.
    - 4b. [ ] Bishop reviews its own observations — Bishop-level patterns, agent behaviour, delegation and skill gaps
    - 4c. [ ] Anything concrete? Delegate the writes to `@lambert` with named file targets and entry content, per `.claude/templates/findings/FINDINGS-TEMPLATE.md`, all applicable files in one delegation
-   - 4d. [ ] `@lambert` appends to `FINDINGS.md`, `PATTERNS.md`, and/or `service-records/[name].md` as applicable
+   - 4d. [ ] `@lambert` appends to `FINDINGS.md`, `PATTERNS.md`, and/or `service-records/[name].md` as applicable. Every `FINDINGS.md` entry carries `**Mission**: mission-[id]` — in central mode that line is what links the finding to its mission in bishop-memory
    - Nothing found? The pass is complete. No delegation, no writes.
 5. [ ] `missions/mission-[id]/DEBRIEF.md` written by `@lambert` from `.claude/templates/mission/DEBRIEF-TEMPLATE.md`
    - Mandatory sections: wrong assumptions, and per-agent mistakes with corrective actions
@@ -430,10 +430,7 @@ Once every step is done, in this exact order:
 9. [ ] Every logical step confirmed to have sync evidence before the mission closes
 10. [ ] Reconcile bishop-memory with the Markdown (central mode only)
    - Skip when `.claude/bishop-memory.conf` is absent or `BISHOP_MEMORY_MODE` is not `central`
-   - Run the reconciler script: `"$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root .claude/memory --url "$BISHOP_MEMORY_URL"`
-     (both `BISHOP_MEMORY_HOME` and `BISHOP_MEMORY_URL` read from the conf; omit
-     `--url` entirely when the conf's URL is empty rather than passing it as ""
-     — the reconciler's own default then applies)
+   - Run `.claude/lib/reconcile-bishop-memory.sh` from the project root. It reads `BISHOP_MEMORY_HOME`, `BISHOP_MEMORY_URL` and `BISHOP_HARNESS` from the conf and always passes `--harness`, so every finding, pattern and service record is attributed to this harness
    - Runs after step 8 so the mission's outcome is present in MISSION-ARCHIVE.md
    - Idempotent and safe to re-run; a non-zero exit means the derived copy is stale, not that the close failed
 

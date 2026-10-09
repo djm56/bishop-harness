@@ -127,9 +127,9 @@ do_one_reconcile() {
   fi
 
   if [ "$_RECONCILE_INCLUDE_URL" = "yes" ]; then
-    "$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root "$PROJECT_ROOT/.claude/memory" --url "$MIRROR_URL" >/dev/null 2>"$RECONCILE_STDERR_FILE"
+    "$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root "$PROJECT_ROOT/.claude/memory" --harness "$MIRROR_HARNESS" --url "$MIRROR_URL" >/dev/null 2>"$RECONCILE_STDERR_FILE"
   else
-    "$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root "$PROJECT_ROOT/.claude/memory" >/dev/null 2>"$RECONCILE_STDERR_FILE"
+    "$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root "$PROJECT_ROOT/.claude/memory" --harness "$MIRROR_HARNESS" >/dev/null 2>"$RECONCILE_STDERR_FILE"
   fi
   RECONCILE_EXIT=$?
 

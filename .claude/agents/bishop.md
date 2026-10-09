@@ -308,10 +308,11 @@ H. ONLY AFTER G: reconcile bishop-memory against the Markdown.
      nothing to reconcile.
    - Delegate it — you hold no state-changing commands. The receiving
      agent's `tools:` list must name Bash.
-   - Command: "$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root
-     .claude/memory --url "$BISHOP_MEMORY_URL"   (all three values read from
-     the conf; omit `--url` entirely when the conf's URL is empty so the
-     reconciler's own default applies — never pass it as an empty string)
+   - Command, from the project root: `.claude/lib/reconcile-bishop-memory.sh`
+     It reads the conf itself and passes `--root`, `--harness` and `--url` to
+     the reconciler, so findings land tagged with this harness and linked to
+     their missions through each entry's `**Mission**` field. Exit 2 names the
+     conf value or file that is missing.
    - It runs AFTER G because it reads MISSION-ARCHIVE.md for the mission's
      outcome. Run earlier and the mission reconciles as still open.
    - It is idempotent, so a re-run is safe and a failure is recoverable by

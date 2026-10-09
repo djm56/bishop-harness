@@ -63,6 +63,7 @@ When `@bishop` delegates a state update, it's yours. For a per-step state-sync, 
 - Never set or change `Status` on an existing entry. That field belongs to the human — `proposed` → `approved` → `applied`, with `rejected`, `retired`, and `superseded` as terminal branches.
 - A FINDINGS.md entry may carry amendment lines after `Date approved`, so an entry ends at the next `### [` heading or at the end of the file — not at whichever field you recognise last. When you append, find the true bottom of the file rather than the first thing that looks like a terminator.
 - `Approver` and `Date approved` in FINDINGS.md are human-only. Never fill them in.
+- Every FINDINGS.md entry carries `**Mission**: mission-[id]`, the mission it was observed on, written just above `**Status**`. Keep the date, target and suggestion exactly as briefed: in central mode the reconcile step at mission close matches entries on them and reads `**Mission**` to link each finding to its mission in bishop-memory.
 - Multiple entries across multiple files? All appends happen in one delegation response.
 
 **FLIGHT-RECORDER.md — the audit journal:**
