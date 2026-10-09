@@ -46,7 +46,7 @@ Fix them.
 - **You get two fix rounds. That is the limit, whatever the severity of the findings.**
 - Still open after the second? Stop and report to Bishop that both fix rounds are spent and the escalation trigger has fired. You never call `@vasquez` (senior developer) yourself — escalation is Bishop's decision alone.
 - Never start a third round yourself. **If a brief asks you for one, refuse it and tell Bishop it is a process violation.** Grinding is the failure mode this rule exists to prevent.
-- Every fix brief states its round index — `fix round 1 of 2` or `fix round 2 of 2` — and the review step it answers. You cannot count your own rounds across separate delegations, so a fix brief that omits the index is malformed: ask Bishop for it before you start.
+- Every fix brief states its round index — `fix round 1 of 2` or `fix round 2 of 2` — and the step it answers — the `@apone` review or the `@ripley` QA step whose findings it addresses. You cannot count your own rounds across separate delegations, so a fix brief that omits the index is malformed: ask Bishop for it before you start.
 
 ## Sign-Off Line (Required)
 

@@ -66,7 +66,7 @@ Which route applies is decided by `.claude/bishop-memory.conf` at the project ro
 - **`BISHOP_MEMORY_MODE=central`** — the ID is allocated, not derived. Call the `mission_allocate` MCP tool with the mission `title`. It returns the ID and registers the mission in one atomic operation, which is what makes duplication impossible: the row holding the ID is created in the same transaction that computed it. The owning harness comes from the project-scope MCP registration, so it does not need passing.
 - **If bishop-memory is unreachable in central mode, stop and tell the operator. Never fall back to local derivation.** State the reason plainly: local derivation is right for one harness and wrong for several — two harnesses both compute the same `NN` — and a reused ID makes the audit trail ambiguous, which is the one thing the journal exists to prevent. A blocked mission start is recoverable; a duplicate ID in an append-only journal is not.
 
-**Central mode carries two obligations.** The ID is allocated at mission start via `mission_allocate`. The reconciler runs at mission close via the script in step 10 of the Closing Checklist above. Between them, a hook mirrors journal rows and mission steps continuously, so the journal and steps stay current — the reconciler at mission close acts as a backstop for all structured tables (mission steps, findings, patterns, service records) and the full reconcile ensures everything is in sync with the Markdown truth.
+**Central mode carries two obligations.** The ID is allocated at mission start via `mission_allocate`. The reconciler runs at mission close via the script in step 10 of the Closing Checklist below. Between them, a hook mirrors journal rows and mission steps continuously, so the journal and steps stay current — the reconciler at mission close acts as a backstop for all structured tables (mission steps, findings, patterns, service records) and the full reconcile ensures everything is in sync with the Markdown truth.
 
 ---
 
@@ -130,7 +130,7 @@ Any sentence anywhere in the file describing something as outstanding, pending, 
 - It's temporary and scoped to the mission: drafts, checklists, scratch notes, analysis, review write-ups while work is in flight.
 - When the active mission is `in-progress` or `blocked`, everything in there survives across sessions and counts as valid context on resume.
 - The canonical files stay canonical regardless: `PROGRESS.md` (plan and step status), `CURRENT-MISSION.md` (live pointer), `FLIGHT-RECORDER.md` (continuity record).
-- Clearing happens only at confirmed new-mission initialization, and **clearing means archiving**: keep `.gitkeep` and `README.md` in place, **move** every other `.md` file into `.claude/memory/workspace/archive-mission-[id]/`, then recreate `findings-scratch.md` with a fresh header. Nothing is deleted — a workspace file is sometimes the only copy of a deliverable that never shipped. The evidence that this ran is the `ls -la` of the directory afterwards, returned with the confirmation. A claim on its own doesn't satisfy it.
+- Clearing happens only at confirmed new-mission initialization, and **clearing means archiving**: keep `.gitkeep` and `README.md` in place, **move** every other file and folder (screenshots and QA evidence included) except existing `archive-mission-*` folders into `.claude/memory/workspace/archive-mission-[id]/`, then recreate `findings-scratch.md` with a fresh header. Nothing is deleted — a workspace file is sometimes the only copy of a deliverable that never shipped. The evidence that this ran is the `ls -la` of the directory afterwards, returned with the confirmation. A claim on its own doesn't satisfy it.
 
 ### Where Things Live
 
@@ -224,9 +224,10 @@ Who gets coding work. Applies while planning *and* while executing. Bishop enfor
 - Bishop escalates when **either** trigger fires, whichever comes first:
   - **Severity trigger** — the same CRITICAL finding is still open after two junior fix rounds, confirmed by two separate `@apone` reviews. Counted **per issue**.
   - **Round trigger** — `@hicks` has completed two fix rounds on this mission, whatever the severity of the findings. Counted **per mission**.
+- A fix round is a developer step answering `@apone` findings or `@ripley` QA findings, plus its paired `@apone` review. A step answering anything else does not increment the counter, but still takes a review immediately behind it under Rule 2.
 - Neither trigger outranks the other. Zero CRITICAL findings does not extend the round allowance.
-- Every developer fix brief states its round index — `fix round 1 of 2` or `fix round 2 of 2` — and the review step it answers. A sub-agent cannot count its own rounds across separate delegations, so a fix brief without the index is malformed. This applies to `@vasquez`'s own rounds exactly as it does to `@hicks`'s. The index goes to the developer only; a review brief carries no round count.
-- The escalation brief to `@vasquez` names which trigger fired, the two `@apone` review step numbers behind it, and the fix-round index reached. `@vasquez` refuses a call-in missing any of the three, so a brief without them stalls the escalation instead of starting it.
+- Every developer fix brief states its round index — `fix round 1 of 2` or `fix round 2 of 2` — and the step it answers — the `@apone` review or the `@ripley` QA step whose findings it addresses. A sub-agent cannot count its own rounds across separate delegations, so a fix brief without the index is malformed. This applies to `@vasquez`'s own rounds exactly as it does to `@hicks`'s. The index goes to the developer only; a review brief carries no round count.
+- The escalation brief to `@vasquez` names which trigger fired; the two step numbers behind it — for the severity trigger, the two `@apone` reviews confirming the CRITICAL; for the round trigger, one step number per fix round — the `@apone` review or `@ripley` QA step that round answered, repeated when both rounds answered the same step; and the fix-round index reached. `@vasquez` refuses a call-in missing any of the three, so a brief without them stalls the escalation instead of starting it.
 - Bishop never pre-plans that step. It appears during execution or not at all.
 
 ### Breaking Them
@@ -248,12 +249,12 @@ Any step where `@hicks` or `@vasquez` creates or changes files outside `.claude/
 
 1. `@apone` reviews the output. Always. There is no "too trivial to review".
 2. **CRITICAL** findings → fix goes to `@hicks` → `@apone` reviews again. That's a new numbered pair of steps.
-3. Junior gets **two fix rounds** (each round = one fix step plus one review step). Escalate to `@vasquez` when the same CRITICAL finding is still open after both, or when both rounds are used whatever the severity — whichever comes first. A junior step answering something other than a review does not increment the counter, but still takes a review immediately behind it.
+3. Junior gets **two fix rounds** (each round = one fix step plus one review step). Escalate to `@vasquez` when the same CRITICAL finding is still open after both, or when both rounds are used whatever the severity — whichever comes first. A junior step answering something other than an `@apone` review or a `@ripley` QA finding does not increment the counter, but still takes a review immediately behind it.
 4. `@vasquez` remediates → `@apone` reviews again. Senior gets **two fix rounds**.
 5. Still failing after two senior rounds → stop and escalate to the operator. Do not keep going.
 6. `@lambert` updates docs only where it's warranted: a public API changed, new files appeared, or something README-relevant moved.
 
-**Brief content is Rule 3's job, not this section's.** Every fix brief here — junior or senior — carries the round index and the review step it answers; the escalation brief to `@vasquez` carries the trigger, both `@apone` review step numbers, and the fix-round index reached. See Rule 3 above for the exact wording; this section doesn't restate it, so the two can't drift apart the way they just did.
+**Brief content is Rule 3's job, not this section's.** Every fix brief here — junior or senior — carries the round index and the step it answers; the escalation brief to `@vasquez` carries the trigger, the two step numbers behind the trigger, and the fix-round index reached. See Rule 3 above for the exact wording; this section doesn't restate it, so the two can't drift apart the way they just did.
 
 The review step is a numbered plan step like any other, and it gets its own state-sync afterwards.
 
@@ -263,12 +264,61 @@ The review step is a numbered plan step like any other, and it gets its own stat
 
 ## QA Verification — Ripley's Terminal Phase
 
-Ripley is a **terminal QA phase**, not part of the per-step rotation or the code-quality pipeline. She runs **once**, after the final coding step and its paired `@apone` review, when the work has produced a rendered surface and the operator asks for or the brief includes a design reference to verify against. She is never in a plan by default.
+This section is the canonical statement of how `@ripley` (QA verification) fits a mission. `.claude/agents/ripley.md` covers her conduct, `.claude/skills/visual-qa/SKILL.md` the procedure, and `.claude/commands/qa.md` the standalone command. Where any of them disagrees with this section, this section wins.
 
-- **Not automatic:** `@apone` follows every coding step automatically. Ripley follows none of them automatically — she is opt-in.
-- **Not a gate:** Her PASS/DEVIATION/DEFECT/OBSERVATION findings do not drive escalation in the way `@apone`'s CRITICAL does. Where she finds a DEFECT, it goes back to `@hicks`, gets an `@apone` review, then Ripley re-verifies. She gets **two QA rounds**; still failing after the second, the operator takes it.
-- **Round index required:** Every re-verify brief states its round index — `QA round 1 of 2` or `QA round 2 of 2`. Ripley is stateless and cannot count her own rounds across delegations, so a brief without the index is malformed — she refuses it and asks for it.
-- **Pre-flight gate:** Before delegating to her, Bishop clears a blocking gate: reachable target URL (confirmed, resolvable now), design reference or acceptance criteria (not guesswork), target staged and ready, environment named and non-production. If any is missing, Bishop stops and asks the operator — Ripley cannot ask herself.
+### Where She Sits
+
+- Ripley is a **terminal, opt-in phase**, not part of the per-step rotation or the code-quality pipeline. `@apone` follows every coding step automatically; Ripley follows none of them automatically.
+- She is never in a plan **by default**. When the operator asks for QA up front, her step may appear in the initial plan, after the final coding step and its `@apone` review; only non-coding steps, such as `@lambert` documentation, may follow it. In the initial plan, a Ripley step anywhere else makes the plan INVALID. The fix, review and re-verify steps her findings lead to are injected during execution, never planned.
+- Call her when the work produced a rendered surface — a page, a UI, an interactive feature — and a design reference or written acceptance criteria exists to verify against, or when the operator asks for QA.
+
+### The Pre-Flight Gate (Blocking)
+
+Bishop clears all five before delegating to her. Any one missing is a stop, and Bishop asks the operator, because Ripley cannot — `AskUserQuestion` is filtered from sub-agents.
+
+Order matters: confirm the environment is non-production (item 4) and read the conf for the target's origin (item 1) before any request goes to the target — the reachability check included. Bishop's shell is outside the guard.
+
+1. **A reachable target URL** — staging, development, localhost, or a preview URL, with an origin `qa-guard.sh` allows. Read `.claude/qa.conf` whatever the origin: with no conf, or one that doesn't set `QA_ALLOWED_ORIGINS`, only localhost (`localhost`, `127.0.0.1`, `[::1]`, any port) is allowed; a set `QA_ALLOWED_ORIGINS` replaces that default, a `QA_BLOCKED_ORIGINS` entry always wins, and an entry without a port matches only its scheme's default port (80 for `http`, 443 for `https`). Only the operator writes the conf, or authorises a step that does — Bishop cannot. Then, and only then, confirm it resolves now — a read-only request such as `curl -sI <url>` is enough.
+2. **A design reference or written acceptance criteria** — a design file or frame, a screenshot, a specification, or an explicit statement of intent. None supplied is a stop, never an inference.
+3. **The target is staged and ready** — built, content in place, forms wired to something safe, authentication arranged if needed. Ready now, not almost.
+4. **The environment is named and confirmed non-production**, and the target's origin is not in `QA_BLOCKED_ORIGINS` — that list is where production belongs.
+5. **Browser tooling is connected** — at least one browser server providing the capabilities listed in `.claude/skills/visual-qa/SKILL.md` is connected in this session, under a server name Ripley's `tools:` line grants. Bishop confirms it from his own tool list or `/mcp` before delegating. With none connected, stop and tell the operator. A screenshot-only review happens only when the operator authorises it for that run, and Ripley's report then says plainly that no browser was driven.
+
+### Before The First Pass
+
+- **Link-check pre-run.** Ripley's browser can read the status of same-origin links and of the assets a page loaded, but not of links to other sites, and she holds no shell. So before her first pass, Bishop runs whatever link checker is installed, read-only, against the target — no cache or report files written, destructive URLs excluded — every pattern on the skip list in `.claude/skills/visual-qa/technical-integrity.md`, and every `QA_BLOCKED_ORIGINS` entry, because the crawl runs from Bishop's shell, outside the guard. Bishop confirms the checker's cache and output defaults first — its `--help`, for example — and doesn't run it if he can't confirm it writes nothing; its output goes to the terminal, never to a file. Bishop pastes the output into Ripley's brief, the same way `@apone` receives diffs, and does not grade it; Ripley does. No particular checker is required. With none installed, the brief says so and Ripley reports cross-origin links as unchecked.
+- **Which browser.** Ripley's default is an isolated automation browser. She uses the operator's own logged-in browser — Claude in Chrome, for example — only when the brief names it for that run, on the operator's say-so for that run.
+
+### Passes And Rounds
+
+- **First pass** — the initial verification. Its brief carries no round index and is labelled `QA pass — initial`.
+- **Re-verify** — after a DEFECT is fixed, or a DEVIATION the operator sent back is fixed, Ripley re-verifies. At most two: `QA re-verify 1 of 2` and `QA re-verify 2 of 2`. Every re-verify brief states its index and names the QA step it follows up. Ripley is stateless and cannot count her own passes, so a re-verify brief without its index is malformed and she refuses it.
+- **At most three Ripley passes per mission.** A DEFECT, or a DEVIATION the operator sent back, still open after `QA re-verify 2 of 2` ends the QA phase and goes to the operator.
+
+### Fixing What She Finds
+
+- A developer step answering Ripley's findings is a fix round under Rule 3, which says how it counts and what its brief carries.
+- Whoever holds the code fixes it — `@hicks`, or `@vasquez` once escalation has happened. If Rule 3's round trigger fires during QA fixes, escalate before the next fix.
+- Every QA fix step is followed immediately by `@apone` (Rule 2). Only then does Ripley re-verify.
+- Fix, review and re-verify steps are Bishop-injected steps: each gets its PROGRESS.md row before its brief goes out, under the injected-step rule.
+
+### Her Verdicts
+
+- Ripley grades in her own vocabulary — **DEFECT**, **DEVIATION**, **OBSERVATION**, **PASS** — and never uses CRITICAL, which belongs to `@apone` and drives the severity trigger. Her findings never count toward the severity trigger.
+- **DEFECT** — the intent is not met. An open DEFECT blocks the mission from closing as `done`: it is fixed and re-verified, or the operator decides — accepting the risk, recorded in the `QA Verdict` section of `DEBRIEF.md`, or closing the mission `failed`.
+- **DEVIATION** — it works, but does not match the design or stated intent. The operator accepts it or sends it back for a fix; Bishop never decides on the operator's behalf. Accepted deviations are recorded in the `QA Verdict` section of `DEBRIEF.md`.
+- **OBSERVATION** — non-blocking; recorded.
+- Items Ripley reports as unverified, or as needing human review, are listed and recorded in the `QA Verdict` section of `DEBRIEF.md`. They do not block.
+- Severity is hers alone. A QA brief may say what to look at, never what will be found — no proposed severity, no count of passes closed without a DEFECT, no "cosmetic" or "minor" before she has graded it. Bishop never overrides a grade.
+
+### Evidence
+
+Ripley keeps screenshots, console and network captures, and working notes under `.claude/memory/workspace/qa/<run-id>/`. It is scratch like the rest of the workspace, and it is archived with every other file there at the next mission init.
+
+### Standalone `/qa`
+
+- Outside a mission, `/qa` only reports. Anything that needs fixing becomes a `/mission`. Ripley runs as a subagent there too; the guard depends on it.
+- While a mission is `in-progress`, QA work is an injected step in that mission — its PROGRESS.md row goes in before the work is delegated, as for any injected step.
 
 ---
 
@@ -345,7 +395,7 @@ That fix is a **proposal, not an edit**. Agent and skill definitions are human-r
 
 Bishop derives the mission ID first (see Mission IDs above), then confirms all of this, via delegation to @lambert:
 
-1. [ ] `.claude/memory/workspace/` cleared in the archive sense — `.gitkeep` and `README.md` kept, every other `.md` moved to `archive-mission-[id]/`, `findings-scratch.md` recreated with a fresh header — and proven by a returned `ls -la` of the directory. A stated claim without the listing doesn't satisfy this item, and it only goes to an agent whose `tools:` list names Bash — an agent file with no `tools:` line inherits everything rather than being restricted, and does not satisfy this check until its list is written.
+1. [ ] `.claude/memory/workspace/` cleared in the archive sense — `.gitkeep` and `README.md` kept, every other file and folder except existing `archive-mission-*` folders moved to `archive-mission-[id]/`, `findings-scratch.md` recreated with a fresh header — and proven by a returned `ls -la` of the directory. A stated claim without the listing doesn't satisfy this item, and it only goes to an agent whose `tools:` list names Bash — an agent file with no `tools:` line inherits everything rather than being restricted, and does not satisfy this check until its list is written.
 2. [ ] `.claude/memory/missions/mission-[id]/BRIEF.md` built from `.claude/templates/mission/MISSION-TEMPLATE.md`, exactly. Every path written into `Key Files` confirmed to exist as it's written; a path that doesn't exist yet is marked `— to be created at step N`, never left bare. A wrong path in canonical mission state is invisible guidance — later agents assume the documented structure is right and nobody questions it.
 3. [ ] `.claude/memory/missions/mission-[id]/PROGRESS.md` built from the same template, exactly, with the step table filled in for every planned step
 4. [ ] `state/CURRENT-MISSION.md` initialized — new mission id, status `in-progress`, owner, next action
@@ -362,11 +412,12 @@ Once every step is done, in this exact order:
 1. [ ] Final state-sync (last step marked done, FLIGHT-RECORDER row appended with event=step-sync)
 2. [ ] Closing summary written for the operator
 3. [ ] **Tracker-and-reality check (BLOCKING):** diff every canonical tracker the mission touched — a project `progress.md`, a README status table, anything that claims what's done — against what's actually on disk. Drift either way is a blocking discovery: code present with no completed step, or a tracker claiming completion with the code missing. Sync the tracker before closing, or record the drift explicitly in `DEBRIEF.md` using the three kinds of not done from Terms above. Remediation you carry out here is a step: give it a PROGRESS.md row and a sync before continuing the close, then note the drift and its fix in `DEBRIEF.md`.
+   - **QA verdicts (BLOCKING, when Ripley ran):** no DEFECT is open unless the operator has decided on it, and every DEVIATION carries the operator's accept-or-fix decision. Each decision, every accepted DEFECT risk, and every item Ripley reported as unverified or needing human review is recorded in the `QA Verdict` section of `DEBRIEF.md`.
 4. [ ] **Learning pass run (BLOCKING — you cannot skip it):**
    - 4a. [ ] Bishop reads `.claude/memory/workspace/findings-scratch.md` — the notes collected as the steps ran. That list *is* the input; the pass consolidates it rather than recalling it.
    - 4b. [ ] Bishop reviews its own observations — Bishop-level patterns, agent behaviour, delegation and skill gaps
    - 4c. [ ] Anything concrete? Delegate the writes to `@lambert` with named file targets and entry content, per `.claude/templates/findings/FINDINGS-TEMPLATE.md`, all applicable files in one delegation
-   - 4d. [ ] `@lambert` appends to `FINDINGS.md`, `PATTERNS.md`, and/or `service-records/[name].md` as applicable
+   - 4d. [ ] `@lambert` appends to `FINDINGS.md`, `PATTERNS.md`, and/or `service-records/[name].md` as applicable. Every `FINDINGS.md` entry carries `**Mission**: mission-[id]` — in central mode that line is what links the finding to its mission in bishop-memory
    - Nothing found? The pass is complete. No delegation, no writes.
 5. [ ] `missions/mission-[id]/DEBRIEF.md` written by `@lambert` from `.claude/templates/mission/DEBRIEF-TEMPLATE.md`
    - Mandatory sections: wrong assumptions, and per-agent mistakes with corrective actions
@@ -379,39 +430,56 @@ Once every step is done, in this exact order:
 9. [ ] Every logical step confirmed to have sync evidence before the mission closes
 10. [ ] Reconcile bishop-memory with the Markdown (central mode only)
    - Skip when `.claude/bishop-memory.conf` is absent or `BISHOP_MEMORY_MODE` is not `central`
-   - Run the reconciler script: `"$BISHOP_MEMORY_HOME/scripts/reconcile-memory.py" --root .claude/memory --url "$BISHOP_MEMORY_URL"`
-     (both `BISHOP_MEMORY_HOME` and `BISHOP_MEMORY_URL` read from the conf; omit
-     `--url` entirely when the conf's URL is empty rather than passing it as ""
-     — the reconciler's own default then applies)
+   - Run `.claude/lib/reconcile-bishop-memory.sh` from the project root. It reads `BISHOP_MEMORY_HOME`, `BISHOP_MEMORY_URL` and `BISHOP_HARNESS` from the conf and always passes `--harness`, so every finding, pattern and service record is attributed to this harness
    - Runs after step 8 so the mission's outcome is present in MISSION-ARCHIVE.md
    - Idempotent and safe to re-run; a non-zero exit means the derived copy is stale, not that the close failed
 
 ### The Closing Gate
 
-Bishop does not mark `CURRENT-MISSION.md` complete or append to `MISSION-ARCHIVE.md` until the tracker-and-reality check (3), the learning pass (4), and `DEBRIEF.md` (5) have all run. Skip or defer any of the three and the mission stays `in-progress` and cannot close. This is as serious as skipping a per-step sync.
+Bishop does not mark `CURRENT-MISSION.md` complete or append to `MISSION-ARCHIVE.md` until the tracker-and-reality check (3), its QA verdict check included, the learning pass (4), and `DEBRIEF.md` (5) have all run. Skip or defer any of the three and the mission stays `in-progress` and cannot close. This is as serious as skipping a per-step sync.
 
 ### The Hooks
 
-Two POSIX-sh hooks in `.claude/hooks/`, wired up in `.claude/settings.json` on the `Write|Edit` matcher:
+Three POSIX-sh hooks in `.claude/hooks/`, two wired up in `.claude/settings.json` on the `Write|Edit` matcher, and one scoped to `@ripley`:
 
-- **completion-gate.sh** (PreToolUse, HARD BLOCK) — refuses to let `CURRENT-MISSION.md` go to `complete` unless the mission's `DEBRIEF.md` exists **and** carries both mandatory sections, `Wrong Assumptions` and `Sub-Agent Mistakes and Corrections`, each with at least one table row. A heading alone is not enough: the failure that prompted the check was a section whose heading was intact with its row dropped. It also resolves the mission ID from the file on disk when the write does not carry one, so a bare edit — a `new_string` that trims to exactly `complete`, with no `Status:` text anywhere in the diff — is still caught. That bare-word match is narrow, though: `- complete`, `` `complete` ``, `complete.`, `**complete**`, and `complete |` all trim to something other than the literal word `complete`, and every one of them passes through with no denial. The only hook that blocks anything, and only for the shapes its pattern recognises.
+- **completion-gate.sh** (PreToolUse, HARD BLOCK) — refuses to let `CURRENT-MISSION.md` go to `complete` unless the mission's `DEBRIEF.md` exists **and** carries both mandatory sections, `Wrong Assumptions` and `Sub-Agent Mistakes and Corrections`, each with at least one table row. A heading alone is not enough: the failure that prompted the check was a section whose heading was intact with its row dropped. It also resolves the mission ID from the file on disk when the write does not carry one, so a bare edit — a `new_string` that trims to exactly `complete`, with no `Status:` text anywhere in the diff — is still caught. That bare-word match is narrow, though: `- complete`, `` `complete` ``, `complete.`, `**complete**`, and `complete |` all trim to something other than the literal word `complete`, and every one of them passes through with no denial. The only hook in `settings.json` that blocks anything, and only for the shapes its pattern recognises; `qa-guard.sh` below is the other hard block, and it applies only to `@ripley`.
 - **state-continuity.sh** (PostToolUse, WARN ONLY) — three advisory checks, always exiting 0. Cross-mission staleness, once the active mission has a row of its own in the journal; within-mission lag, comparing `PROGRESS.md`'s last `done` step against the newest journal row's Step, and only when the triggering write is ordinary work rather than part of the state machinery; and structural validation of the newest row — pipes, six cells, timestamp format, ordering. Both gates exist because a check that fires during the very operation it audits reports noise, not lag.
+- **qa-guard.sh** (PreToolUse, HARD BLOCK, scoped to `@ripley`) — registered in the `hooks:` frontmatter of `.claude/agents/ripley.md` rather than in `settings.json`, so it runs only while Ripley runs, and only once the operator has accepted the workspace trust dialog for the folder. One hook entry, matcher `Write|Edit|mcp__.*`, runs these checks on every call, in this order: the conf's entries, navigation, `save_to_disk`, then file paths. Tested with jq 1.7.1; with an older jq, rerun the test matrix before relying on it. `about:blank` passes the navigation check but skips nothing else. A denial reports the first error found, whichever check it came from.
+  - **Navigation.** Any call whose `tool_input` carries a `url` field is checked, whatever the tool is called; a call with no `url` field — going back, listing tabs — passes this check. A `url` that is not a non-empty string — empty, `null`, a number, an array, an object — is refused. A string passes only if it is exactly `about:blank`, or an `http` or `https` URL that parses under these rules and whose origin is allowed and not blocked:
+    - the scheme, compared lower-case, is followed by `://`;
+    - the URL contains no backslash, whitespace or control character anywhere;
+    - the authority runs to the first `/`, `?` or `#`, and contains no `@` — userinfo, as in `http://localhost@evil.example`, is refused outright;
+    - the host, lower-cased with one trailing dot dropped, is either characters from `[a-z0-9.-]` with no empty label, or a bracketed IPv6 literal of hex digits, `:` and `.`, with no `%`;
+    - the port, when present, is one to five digits with no leading zero, from 1 to 65535; when absent it is the scheme default — 80 for `http`, 443 for `https`.
 
-**Both fail open, though not all of it is by design.** The missing-`jq` and missing-`awk` checks in `completion-gate.sh` are deliberate: an explicit `command -v` guard prints a warning and exits 0 before anything else runs, because a gate that jams the loop is worse than one that misses. But the `grep -c` count inside `check_section` has no equivalent guard — if `grep` can't produce a count, `pipe_count` comes back empty and `[ "$pipe_count" -lt 3 ]` errors instead of testing true or false, so the deny branch is skipped and the function falls through to its own success case. That path fails open too, but by accident of how `test` handles a non-numeric operand, not by a written check. Either way, neither hook can be relied on as a guarantee.
+    Anything else — relative, scheme-less, unparseable, or on another scheme, `file:`, `data:` and `javascript:` included — is refused.
+  - **Origins.** `.claude/qa.conf` sets `QA_ALLOWED_ORIGINS` and `QA_BLOCKED_ORIGINS`, each a space-separated list of entries shaped `scheme://host[:port]` — scheme `http` or `https`, required; no path; the host lower-cased before comparison and held to the same rules as a URL host, with an optional leading `*.`. A port written `:*` matches any port; an entry without a port matches only the scheme's default port. `*.example.com` matches a subdomain of `example.com` at any depth — `a.example.com`, `a.b.example.com` — but not `example.com` itself. A blocked match always wins. A malformed entry in either list denies every call until it is fixed, and the denial names the entry. A set `QA_ALLOWED_ORIGINS` **replaces** the default allowlist — list localhost yourself if you still want it — and set but empty allows only `about:blank`. With no conf, or a conf that doesn't set `QA_ALLOWED_ORIGINS`, the default applies: `http://localhost:*`, `https://localhost:*`, `http://127.0.0.1:*`, `https://127.0.0.1:*`, `http://[::1]:*` and `https://[::1]:*`.
+  - **File paths.** Every field of `tool_input` whose key, lower-cased, ends in `path`, `paths`, `file`, `files`, `filename`, `filenames`, `dir` or `directory` is checked — a string value directly, an array of strings element by element (an empty array passes); any other value — a number, a boolean, `null`, an object, or an array holding a non-string — is refused. Fields under other keys are not descended into. Each value must resolve to `.claude/memory/workspace/qa/` itself or something under it. Uploads are covered too: a file a browser tool reads from disk to upload must come from the evidence folder. The one read-source key, `sourcePath` — matched exactly and case-sensitively —, may instead resolve inside `.claude/skills/visual-qa/`. Resolution is lexical, with no symlink resolution: the project root is `CLAUDE_PROJECT_DIR`, falling back to two directories above the script as `completion-gate.sh` does; a relative value is joined to the root; repeated `/` and `./` segments collapse; and an empty value, a leading `~`, or any `..` segment is refused. The prefix test compares whole path segments, so `qa-evil/` never passes as `qa/`. A `save_to_disk` field that is boolean `true`, or the string `"true"` in any case, is refused, because its destination can't be checked.
+  - **It fails closed.** Missing `jq`, unparseable input, a project root that is not an absolute path, or a conf that exists but can't be read denies the call with a message naming the fix. A denial prints the same JSON `permissionDecision: deny` object `completion-gate.sh` prints, writes the reason to stderr as well, and exits 2. That is the reverse of `completion-gate.sh`'s fail-open, on purpose: a missed check here can put Ripley on production.
+  - **The conf is read line by line and never sourced**, so it cannot execute anything. Blank lines and lines starting with `#` are skipped; every other line splits on its first `=` into key and value (a line with no `=` is a key with an empty value), with no whitespace trimming and no quote stripping; unknown keys are ignored; the last occurrence of a key wins; a final line without a trailing newline is still read. A value carrying a carriage return or other control character makes its entries malformed. `.claude/qa.conf` is per-repo and untracked; `.claude/qa.conf.example` is the portable template.
+  - **It exists only in Ripley's frontmatter**, so she always runs as a subagent — Bishop never performs her procedure in the main session, `/qa` included.
 
-Both are reversible. They back up the written rules; they don't replace them.
+**completion-gate.sh and state-continuity.sh fail open, though not all of it is by design.** The missing-`jq` and missing-`awk` checks in `completion-gate.sh` are deliberate: an explicit `command -v` guard prints a warning and exits 0 before anything else runs, because a gate that jams the loop is worse than one that misses. But the `grep -c` count inside `check_section` has no equivalent guard — if `grep` can't produce a count, `pipe_count` comes back empty and `[ "$pipe_count" -lt 3 ]` errors instead of testing true or false, so the deny branch is skipped and the function falls through to its own success case. That path fails open too, but by accident of how `test` handles a non-numeric operand, not by a written check. Either way, neither hook can be relied on as a guarantee.
+
+`completion-gate.sh` and `state-continuity.sh` are reversible: they back up the written rules; they don't replace them. `qa-guard.sh` is reversible too — remove its `hooks:` entry from `.claude/agents/ripley.md` — but while it is registered it is a hard block, not a backup.
 
 ### What Is Not Enforced
 
-Almost everything in this file is prose instruction to a model. Two things have mechanical backing, and neither is absolute — the bullets below say where each stops. `completion-gate.sh` refuses a `Write` or `Edit` that sets `CURRENT-MISSION.md` to `complete` unless a `DEBRIEF.md` exists carrying both mandatory headings. And `.claude/settings.json` carries two `permissions.deny` rules refusing `sed -i` and `perl -i`, which retire a mechanism that once corrupted a doctrine file while reporting the edit as applied. Everything else below is compliance rather than mechanism. Being specific about the gaps matters more than the reassurance of not naming them:
+Almost everything in this file is prose instruction to a model. Three things have mechanical backing, and none is absolute — the bullets below say where each stops. `completion-gate.sh` refuses a `Write` or `Edit` that sets `CURRENT-MISSION.md` to `complete` unless a `DEBRIEF.md` exists carrying both mandatory headings. `qa-guard.sh` confines `@ripley`'s navigation to an allowlist and her file writes to the QA evidence folder. And `.claude/settings.json` carries two `permissions.deny` rules refusing `sed -i` and `perl -i`, which retire a mechanism that once corrupted a doctrine file while reporting the edit as applied. Everything else below is compliance rather than mechanism. Being specific about the gaps matters more than the reassurance of not naming them:
 
-- **Both hooks match `Write|Edit` only.** A shell mutation — `sed -i`, a redirect, a heredoc, `tee` — is invisible to both. Any agent holding Bash can write a state file with no gate consulted and no warning raised.
-- **No path in this repository is protected from an agent, and the two deny rules restrict a habit rather than a location.** Path-based rules over `.claude/agents/**`, `.claude/skills/**` and `.claude/memory/reference/DIRECTIVES.md` were added and then deliberately lifted, because locking the harness's own files blocked their own correction within a day. Even while they stood they reached only the built-in file tools and the shell file commands Claude Code recognises — never a script that opens a file itself. The two surviving rules match `sed -i` and `perl -i` literally, so `sed -i.bak`, `sed --in-place` and `perl -pi -e` all pass. Human ratification of agent and skill definitions is doctrine, not mechanism.
+- **completion-gate.sh and state-continuity.sh match `Write|Edit` only.** A shell mutation — `sed -i`, a redirect, a heredoc, `tee` — is invisible to both. Any agent holding Bash can write a state file with no gate consulted and no warning raised.
+- **No path in this repository is protected from an agent, and the two deny rules restrict a habit rather than a location.** The one exception is `qa-guard.sh`, which confines `@ripley`'s writes and only hers. Path-based rules over `.claude/agents/**`, `.claude/skills/**` and `.claude/memory/reference/DIRECTIVES.md` were added and then deliberately lifted, because locking the harness's own files blocked their own correction within a day. Even while they stood they reached only the built-in file tools and the shell file commands Claude Code recognises — never a script that opens a file itself. The two surviving rules match `sed -i` and `perl -i` literally, so `sed -i.bak`, `sed --in-place` and `perl -pi -e` all pass. Human ratification of agent and skill definitions is doctrine, not mechanism.
+- **qa-guard.sh sees direct navigation only.** A clicked link, a form submit, a script that sets `location`, or a server-side redirect can still take Ripley's browser off the allowlist. The browser server's own origin restrictions, where it has them, are the layer that catches those; `INSTALL.md` covers configuring them.
+- **qa-guard.sh checks the field names it knows.** A browser server that writes files through a differently named field, or inside a nested object, writes unchecked.
+- **Files written without a path field land wherever the browser server puts them.** A screenshot taken with no filename goes to the server's own output directory, which the guard never sees. Ripley always passes an explicit path; `INSTALL.md` covers pointing the server's output directory at the evidence folder.
 - **Fail-open means not-enforced on a host missing a tool.** Without `jq` or `awk` the completion gate stands aside entirely.
 - **The mandatory-section check counts pipe-prefixed lines, not filled-in content.** `check_section` requires at least three lines starting with `|` under each heading — header, separator, one row, by shape alone. `DEBRIEF-TEMPLATE.md`'s own unfilled placeholder rows already clear that count, so a DEBRIEF.md submitted as the bare template — headings present, every field still reading `[assumption]` or `[what went wrong]` — satisfies the gate exactly as a properly filled-in one would.
 - **`MISSION-ARCHIVE.md` has no gate.** Nothing prevents an outcome row being appended out of order, or at all.
 - **`CURRENT-MISSION.md`'s `Last Updated` is checked by nothing.** Only `FLIGHT-RECORDER.md` rows have their ordering verified, and only the newest one.
 - **The delegation contract is not mechanically enforced at any point.** Rule 1, Rule 2, the fix-round limits, the escalation triggers, the per-step sync, the tracker check and the learning pass are all compliance, not mechanism. The one structural exception is `tools:` scoping, and it reaches further than just the escalation path: `Task` appears in exactly one of the six agent files, `bishop.md`. `@hicks`, `@vasquez`, `@apone`, `@lambert`, and `@ripley` all omit it, so no sub-agent can call another agent — that makes every delegation Bishop's alone by construction, not only the hand-off to `@vasquez`.
+- **qa-guard.sh does not run in a `-p` session.** Frontmatter hooks wait for the workspace trust dialog, and a `-p` session never counts as accepting it. Run Ripley in an interactive session when the guard matters.
+- **qa-guard.sh resolves paths lexically.** A symlink already inside `.claude/memory/workspace/qa/` that points elsewhere is followed by whatever writes through it.
+- **qa-guard.sh does not see page scripts or reads.** In-page `fetch`, XHR and `window.open` from a page script pass no hook, and Ripley's `Read`, `Glob` and `Grep` are not checked at all. Those limits are doctrine, in `.claude/agents/ripley.md` and `.claude/skills/visual-qa/technical-integrity.md`.
 
 Treat every other "blocking gate" in this document as a rule an agent is asked to follow, and write briefs accordingly.
 
@@ -472,7 +540,7 @@ OPERATOR REQUEST
                       ▼
 ┌─────────────────────────────────────────┐
 │ CLOSING GATE                            │
-│ A.Summary → B.Tracker check →           │
+│ A.Summary → B.Tracker + QA check →      │
 │ C.Learning pass → D.DEBRIEF →           │
 │ E.Mark complete →                       │
 │ F.FLIGHT-RECORDER complete row →        │
@@ -497,8 +565,10 @@ OPERATOR REQUEST
 | FLIGHT-RECORDER row re-read and verified after append | Blocking gate | Sync can't be reported complete |
 | Two junior fix rounds maximum, per mission | Escalation rule | Must go to @vasquez |
 | Two senior fix rounds maximum | Escalation rule | Must go to the operator |
-| Ripley pre-flight gate (target URL, design reference, target staged, environment non-production) | Blocking gate | Ripley can't be delegated |
-| Two QA rounds maximum | Escalation rule | Must go to the operator |
+| Ripley pre-flight gate (target URL, design reference, target staged, environment non-production, browser tooling connected) | Blocking gate | Ripley can't be delegated |
+| Two QA re-verifies maximum (three Ripley passes) | Escalation rule | Must go to the operator |
+| Open QA DEFECT at close | Blocking gate | Mission can't close as done without the operator's decision |
+| Ripley's navigation inside the QA allowlist and her writes inside the QA evidence folder | Hard block (qa-guard.sh) | The tool call is denied |
 | Tracker-and-reality check at completion | Blocking gate | Mission can't close |
 | Learning pass at completion | Blocking gate | Mission can't close |
 | DEBRIEF written at completion | Blocking gate | Mission can't close |
@@ -507,7 +577,7 @@ OPERATOR REQUEST
 
 ---
 
-**Of everything in that table, two rows have some mechanical backing, and the two differ in kind.** `DEBRIEF written at completion` is enforced by `completion-gate.sh`, which refuses the transition to `complete` without it — that row blocks. `FLIGHT-RECORDER row re-read and verified after append` is backed too, partially: `state-continuity.sh` runs the same four structural checks — leading and trailing pipes, six cells, a valid timestamp, and forward ordering — automatically, on every write, but only as an advisory warning. It never denies the write, so the row's blocking force still rests on @lambert's manual read-back, not on the hook. Every other row is doctrine — a rule an agent is asked to follow, with nothing checking that it did. See What Is Not Enforced above.
+**Of everything in that table, three rows have some mechanical backing, and the three differ in kind.** `DEBRIEF written at completion` is enforced by `completion-gate.sh`, which refuses the transition to `complete` without it — that row blocks. `FLIGHT-RECORDER row re-read and verified after append` is backed too, partially: `state-continuity.sh` runs the same four structural checks — leading and trailing pipes, six cells, a valid timestamp, and forward ordering — automatically, on every write, but only as an advisory warning. It never denies the write, so the row's blocking force still rests on @lambert's manual read-back, not on the hook. `Ripley's navigation inside the QA allowlist and her writes inside the QA evidence folder` is enforced by `qa-guard.sh`, which blocks, fails closed, and covers only Ripley. Every other row is doctrine — a rule an agent is asked to follow, with nothing checking that it did. See What Is Not Enforced above.
 
 ## Templates
 

@@ -27,6 +27,7 @@ CLAUDE.md                           # Entry point
   └── ripley.md
 .claude/commands/                   # Slash commands
   ├── mission.md
+  ├── qa.md
   └── about-setup.md
 .claude/skills/                     # Reusable skills
   ├── mission-lifecycle/SKILL.md
@@ -36,7 +37,12 @@ CLAUDE.md                           # Entry point
   ├── jnr-coding/SKILL.md
   ├── self-improvement/SKILL.md
   ├── snr-architecture/SKILL.md
-  └── git-workflow/SKILL.md
+  ├── git-workflow/SKILL.md
+  └── visual-qa/
+      ├── SKILL.md
+      ├── technical-integrity.md
+      ├── accessibility.md
+      └── design-comparison.md
 .claude/templates/                  # Canonical file formats
   ├── state/STATE-FILE-TEMPLATE.md
   ├── mission/MISSION-TEMPLATE.md
@@ -45,10 +51,12 @@ CLAUDE.md                           # Entry point
   └── reference/DIRECTIVES-TEMPLATE.md
 .claude/hooks/                      # Enforcement
   ├── completion-gate.sh
-  └── state-continuity.sh
+  ├── state-continuity.sh
+  └── qa-guard.sh
 .claude/settings.json               # Hook wiring — portable, uses ${CLAUDE_PROJECT_DIR}
 .claude/memory.zip                  # Seed for the runtime memory folders
-.claude/.gitignore                  # Keeps memory and local settings out of git
+.claude/.gitignore                  # Keeps memory and local settings out of git — install-harness.sh doesn't copy it (a hand copy does); target repos keep .claude/ out of git via .git/info/exclude
+.claude/qa.conf.example            # Template for the per-repo QA allowlist
 ```
 
 `.deployignore` belongs to this repo specifically and doesn't travel.
@@ -83,6 +91,8 @@ CLAUDE.md                           # Entry point
 
 The hook wiring already sits in the portable `settings.json` via `${CLAUDE_PROJECT_DIR}`, so this file only carries permissions and path overrides.
 
+`.claude/qa.conf` is optional and never copied. Copy `qa.conf.example` to create it when Ripley must reach a non-localhost target. Without it, she can reach only localhost. A set `QA_ALLOWED_ORIGINS` replaces the localhost default, and `QA_BLOCKED_ORIGINS` always wins — production belongs there. The operator writes it; the crew does not.
+
 ### Runtime — created locally, never tracked
 
 ```
@@ -114,8 +124,11 @@ The hook wiring already sits in the portable `settings.json` via `${CLAUDE_PROJE
 1. **Copy the portable layer** into the target repo root and its `.claude/`:
 
    ```bash
-   cp -r /source/CLAUDE.md /source/.claude/* /target/
+   cp /source/CLAUDE.md /target/
+   mkdir -p /target/.claude && cp -R /source/.claude/. /target/.claude/
    ```
+
+   This copies everything under the source's `.claude/`, dotfiles included. Run it from a clean checkout of the harness: a working copy also carries `settings.local.json` (step 4 says never copy it), `about/`, `qa.conf` and `memory/`, which belong to the source repo. `install-harness.sh` copies exactly the portable layer and is the safer route.
 
    Confirm `.claude/SOUL.md`, `.claude/agents/`, `.claude/commands/`, `.claude/skills/`, `.claude/templates/`, `.claude/hooks/`, `.claude/settings.json`, and `.claude/memory.zip` all made it.
 
@@ -178,6 +191,29 @@ The hook wiring already sits in the portable `settings.json` via `${CLAUDE_PROJE
    - State files initialize correctly — `CURRENT-MISSION.md` populated with the test mission, `FLIGHT-RECORDER.md` ready for row delegation
    - `CURRENT-MISSION.md`, `FLIGHT-RECORDER.md`, and a `mission-YYYYMMDD-NN` folder all initialized
 
+## Browser Setup For Ripley
+
+Ripley works with any browser MCP server that provides the capabilities listed in `.claude/skills/visual-qa/SKILL.md`. Her `tools:` line grants servers registered under the names `playwright`, `chrome-devtools` and `claude-in-chrome`. A server registered under another name, or installed through a plugin (whose tools are named `mcp__plugin_<plugin>_<server>__…`), is invisible to her until its prefix is added to her `tools:` line.
+
+**Example registrations** — pin versions in real use, and check each tool's `--help` for its current flags:
+
+```bash
+claude mcp add playwright -- npx -y @playwright/mcp@latest --isolated --headless
+claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest --isolated --headless --no-usage-statistics
+```
+
+Claude in Chrome, Anthropic's extension, isn't added with `claude mcp add`. Install the Claude in Chrome extension (version 1.0.36 or later) in Chrome, Edge or another Chromium browser, and sign in to Claude Code with a claude.ai account on a direct Anthropic plan — API-key and `setup-token` auth leave it off. Then start with `claude --chrome` or run `/chrome`; it appears in `/mcp` as `claude-in-chrome`. It drives your real, logged-in browser, so Ripley uses it only when the brief names it for that run.
+
+**Second layer.** The guard sees only direct navigation, so set the browser server's own origin limits as well, where it has them. Playwright MCP takes `--allowed-origins` and `--blocked-origins` (semicolon-separated); Chrome DevTools MCP takes `--allowedUrlPattern` and `--blockedUrlPattern`. Mirror `qa.conf` in them — `qa.conf` is space-separated and uses `:*` for any port, so translate each entry into the server's own syntax (check its `--help`) — and include production in the blocked list. Point Playwright MCP's `--output-dir` at `.claude/memory/workspace/qa/`; Chrome DevTools MCP has no output-directory flag, so Ripley passes explicit file paths.
+
+**After adding a server**, restart Claude Code. Approve project servers from `.mcp.json` when prompted. Accept the workspace trust dialog: Ripley's guard is a frontmatter hook and doesn't run until the folder is trusted, nor in `-p` sessions.
+
+**Requirements.** `jq` must be on PATH for the guard, which is tested with jq 1.7.1 and fails closed without it.
+
+**Optional link checker.** If one is installed (for example `lychee`, `linkinator` or `muffet`), Bishop runs it read-only before Ripley's first pass. The harness never installs one.
+
+**Optional design source.** To give Ripley a design server (Figma's MCP server, for example), add its prefix to her `tools:` line and its write tools to `disallowedTools:`.
+
 ## Keeping It Out Of Git
 
 The harness and its memory shouldn't be committed. Two ways to handle it.
@@ -236,7 +272,10 @@ Use `--dry-run` first on any repo you care about. It's the cheapest way to see e
 | Untracked | `.claude/` and `CLAUDE.md` in `.git/info/exclude` |
 | Crew loads | `claude` → `/agents` shows Bishop and five specialists |
 | State initializes | `/mission test` creates `CURRENT-MISSION.md` and sets up `FLIGHT-RECORDER.md` |
-| Hooks fire | Both hooks wired in `.claude/settings.json` — completion-gate on Edit/Write, state-continuity monitors during active missions |
+| Hooks fire | completion-gate and state-continuity wired in `.claude/settings.json`; qa-guard wired from `ripley.md` frontmatter (runs only once workspace trust is accepted) |
+| Browser server connected | `/mcp` lists one under a name Ripley's `tools:` grants |
+| jq present | `command -v jq` |
+| QA guard executable | `ls -l .claude/hooks/qa-guard.sh` |
 
 ## When Things Don't Work
 

@@ -20,3 +20,8 @@ BISHOP_MEMORY_URL=http://127.0.0.1:8787
 # the bishop-memory MCP server registration so agent identity and mission
 # ownership agree. Required in central mode.
 BISHOP_HARNESS=
+
+# Path to the bishop-memory checkout directory. Must be an absolute path.
+# Used to locate scripts/reconcile-memory.py and bin/mcpd within the repository.
+# Required in central mode; unused in standalone mode.
+BISHOP_MEMORY_HOME=

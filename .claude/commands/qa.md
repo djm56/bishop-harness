@@ -1,126 +1,133 @@
 ---
-description: Run QA verification on a rendered target against a design or acceptance criteria
-argument-hint: <target URL> [design reference or criteria location]
+description: Run QA verification on a rendered target against a design or acceptance criteria — Ripley drives the browser, Bishop clears the gate
+argument-hint: <target URL> [design reference or acceptance criteria] [environment name]
 ---
 
-> **Ripley drives the browser.** You do not. QA verification is a specialist step, delegated just like any other. Bishop does the gate-keeping; @ripley does the work.
+> **You are Bishop.** Ripley drives the browser; you clear the gate, brief her, and read what comes back. You never drive the browser yourself, and you never run her procedure in this session — her guard exists only when she runs as a subagent.
 
-> **Full rules**: `.claude/skills/visual-qa/SKILL.md` covers the step-by-step process. `.claude/agents/ripley.md` covers her bearing, constraints, and reporting format.
-
----
-
-## The Four-Part Pre-Flight Gate (Blocking)
-
-Ripley does not start until all four hold. If any is missing, stop and work it out before delegating.
-
-### 1. A Reachable Target URL
-
-**Ask:**
-> What is the URL to test? (Staging, development, or localhost — never production. State it now and I'll confirm it's reachable.)
-
-- Confirm it's resolvable right now. Try it: `curl -I <url>`.
-- Must be non-production. Staging, development, localhost, a preview URL — anything except the live site.
-- Accept only a specific, complete URL. Nothing vague. If the operator offers `example.com`, ask which exact path or subdomain.
-
-**If missing:** Stop. You cannot delegate to Ripley without a target.
-
-### 2. A Design Reference or Written Acceptance Criteria
-
-**Ask:**
-> What are you comparing this against? A Figma link, a screenshot, a spec, or an explicit statement of what it should do?
-
-- Figma link — ask for the specific frame or page.
-- Screenshot or mockup — ask for the location (local file path, shared drive, etc.).
-- Written spec or acceptance criteria — ask for a link or quote the relevant part.
-- Explicit intent — ask them to state it plainly.
-
-**If the brief requests QA with no design supplied, this is a stop.** Do not infer intent. Ask the operator for the reference. Tell them Ripley cannot guess what "correct" means.
-
-**If missing:** Stop. You cannot delegate to Ripley without a standard to measure against.
-
-### 3. The Target Is Staged and Ready
-
-**Ask:**
-> Is the target fully built and ready to test right now? (Page built, content in place, forms wired, authentication done if needed — not "almost ready".)
-
-- Not "almost ready". Not "we'll finish it while you're testing". Ready now.
-- Forms, if present, should be wired to something that won't break the target (a test endpoint, a staging backend, or a harmless confirmation — not production).
-
-**If the operator says "almost":** Tell them to come back when it's ready. Stop here.
-
-**If missing:** Stop. You cannot delegate to a target that isn't staged.
-
-### 4. Environment Named and Confirmed Non-Production
-
-**Ask:**
-> Say the name of the environment: `staging`, `development`, `localhost`, a preview URL — confirm it's not production.
-
-- State it plainly so Ripley knows what she's testing against.
-- No ambiguity. Not "mostly staging". Not "dev-like". The actual environment name.
-
-**If production:** Stop. Ripley does not test production. Safety rule.
-
-**If missing or ambiguous:** Stop. Ask again until you have a clear, non-production environment name.
+> **Canonical rules:** `.claude/skills/mission-lifecycle/SKILL.md` → QA Verification. Her conduct: `.claude/agents/ripley.md`. Her procedure: the `visual-qa` skill. Where this file and the lifecycle disagree, the lifecycle wins.
 
 ---
 
-## All Four Present — Delegate to Ripley
+## 1. Read The Arguments
 
-Once all four gates hold, hand the work to `@ripley`:
+Parse `$ARGUMENTS` for:
+- the target URL
+- a design reference or acceptance criteria (a link, a file path, or quoted text)
+- an environment name
+
+Use what is there. Ask, with `AskUserQuestion`, only for what is missing, one question per missing gate item. Don't ask again for anything the arguments already settled.
+
+---
+
+## 2. Check For An Active Mission
+
+Read `.claude/memory/state/CURRENT-MISSION.md`.
+
+- **Status `in-progress`:** this QA is an injected step in that mission. After the gate clears, and immediately before the brief goes out, delegate its PROGRESS.md row to `@lambert`: status `in-progress`, note `(operator-directed, injected HH:MM UTC)`. Run the mission's per-step sync after Ripley reports. Fix, review and re-verify steps that follow are Bishop-injected steps under the lifecycle.
+- **Status `blocked`:** stop and tell the operator. A blocked mission is repaired before any step goes out.
+- **Status `not-started` or `complete`, or no file:** this is standalone QA. It only reports, and no state files are written. Anything that needs fixing becomes a `/mission`.
+
+---
+
+## 3. The Pre-Flight Gate (Blocking)
+
+All five must hold. Any one missing is a stop, and you ask the operator. Check item 4, and the conf read in item 1, before you send any request to the target — the reachability check included. Your shell is outside her guard.
+
+1. **Reachable target URL.**
+   - Read `.claude/qa.conf` whatever the origin. With no conf, or one that doesn't set `QA_ALLOWED_ORIGINS`, only localhost is allowed (`localhost`, `127.0.0.1`, `[::1]`, any port). A set `QA_ALLOWED_ORIGINS` replaces that default, a `QA_BLOCKED_ORIGINS` entry always wins, and an entry without a port matches only its scheme's default port (80 for `http`, 443 for `https`). If the target's origin isn't allowed, only the operator can change the conf, or authorise a step that does; you cannot.
+   - Then, and only then, confirm it resolves with a read-only request, for example `curl -sI <url>`.
+
+2. **Design reference or written acceptance criteria.**
+   - None supplied is a stop. Never infer what "correct" means.
+
+3. **Target staged and ready.**
+   - Ask the operator to confirm it is built, content is in place, forms are wired to something safe, and any login is arranged. "Almost ready" is not ready.
+
+4. **Environment named and non-production.**
+   - `staging`, `development`, `localhost`, a preview URL. Production is a stop.
+   - A target whose origin is in `QA_BLOCKED_ORIGINS` is a stop — that list is where production belongs.
+
+5. **Browser tooling connected.**
+   - Check your own tool list for browser tools under a prefix Ripley's `tools:` line grants: `mcp__playwright__`, `mcp__chrome-devtools__` or `mcp__claude-in-chrome__`. You can also check `/mcp`.
+   - With none, stop and point the operator to the browser setup in `INSTALL.md`.
+   - New MCP servers and changes to agent files take effect only after a Claude Code restart.
+
+---
+
+## 4. Before Briefing Her
+
+- **Is the guard running?** Ripley's guard runs only in a folder whose workspace trust the operator has accepted, and never in a `-p` session. If the guard may not be running — an untrusted folder, or a `-p` session — tell the operator, and stop unless they accept an unguarded run. The guard check below is how Ripley confirms it at the start.
+
+- **Link check.**
+  - If a link checker is already installed, run it yourself, read-only, against the target. Check with `command -v` (for example `lychee`, `linkinator`, `muffet`); never install one, and never use `npx` or similar to fetch one.
+  - Exclude every pattern on the skip list in `.claude/skills/visual-qa/technical-integrity.md` and every `QA_BLOCKED_ORIGINS` entry — the crawl runs from your shell, outside the guard, and would otherwise follow a staging link into production.
+  - Confirm the tool's cache and output defaults first (its `--help`, for example); if you can't confirm it writes nothing, don't run it. Its output goes to your terminal, never to a file.
+  - Paste its output into the brief and do not grade it. Ripley does.
+  - With none installed, the brief says: `No link checker installed — cross-origin links will be Unverified.`
+
+- **Browser.**
+  - Her default is an isolated automation browser.
+  - Name the operator's own logged-in browser (Claude in Chrome, for example) only when the operator says so for this run, typically for a target behind a login automation can't pass.
+  - Screenshot-only review only when the operator authorises it for this run.
+
+- **Pass label.** The first pass is `QA pass — initial`.
+
+- **Optional guard check.** You may name one URL for her to try once at the start that is not in `QA_ALLOWED_ORIGINS` and goes nowhere, such as `http://guard-check.invalid/`. A denial indicates the guard is running — it exercises navigation only, not path checks. No denial means it may not be, and she reports that at the top.
+
+---
+
+## 5. The Brief
 
 ```
-Step [N]: @ripley — QA verification
+@ripley — QA verification — <pass label>
 
-Target URL: [exact, complete, confirmed non-production URL]
-Design reference: [Figma link / screenshot path / spec link / explicit intent statement]
-Environment: [staging / development / localhost / preview URL]
+Step: <mission step number | standalone>
+Target URL: <exact URL>
+Environment: <name> — confirmed non-production
+Design reference / acceptance criteria: <link, path or quoted criteria>
+Browser: isolated automation browser | <operator's browser>, named by the operator for this run
+Screenshot-only review authorised: no | yes, by the operator, for this run
+Pages and widths in scope: <list> | skill defaults
+Link-check output: <pasted output> | No link checker installed — cross-origin links will be Unverified.
+Guard check URL: <off-allowlist URL> | none
+Follows up: QA step <N>, after fix step <N> and review step <N> — re-verify only
+Findings to re-check: <list> — re-verify only
 
-Full brief:
-Verify the rendered work at [URL] against [design/intent]. 
-
-Walk these four areas:
-- Visual fidelity: spacing, type, colour, layout, imagery, alignment. Match the design exactly.
-- Functional flow: navigation, forms, interaction states (hover, focus, error, empty, loading). Sequences work.
-- Responsive behaviour: test at mobile (375px), tablet (768px), desktop (1440px). Reflow clean, touch targets adequate.
-- Accessibility: contrast, focus order, landmarks, alt text, keyboard nav, console errors.
-
-Grade each finding as DEFECT (broken, intent not met), DEVIATION (works, doesn't match design), OBSERVATION (non-blocking note), or PASS (all covered, meets intent).
-
-Do not fix anything. Report findings only.
+Follow .claude/agents/ripley.md and the visual-qa skill. Report only; fix nothing.
 
 When done, end your output with two lines:
 IMPROVEMENT-NOTE: none | <one concrete, actionable observation>
-STEP [N] COMPLETE — state-sync required before next step.
+STEP <step number | standalone> COMPLETE — state-sync required before next step.
 ```
 
----
+Rules for the brief:
 
-## After Ripley Reports
-
-Read her verdict and next action:
-
-- **PASS** — verified. Work is ready.
-- **DEVIATION** — works, but differs from the design. Decide: ship as-is, or fix and re-verify. If you decide to fix, `@hicks` takes the follow-up, then `@apone` reviews, then Ripley re-verifies at `QA round 1 of 2`. If you ship as-is, note the deviation and move on.
-- **DEFECT** — broken. Goes back to `@hicks` for a fix, then `@apone` for review, then Ripley re-verifies. That's `QA round 1 of 2`. If a DEFECT persists after the second round, Ripley stops and the operator takes it from there.
-- **OBSERVATION** — something worth knowing, but not blocking. Record it in the DEBRIEF and move on.
-
-Ripley's verdict is final. Do not override it.
+- A re-verify brief uses `QA re-verify 1 of 2` or `QA re-verify 2 of 2`, names the QA step it follows up and the fix and review steps between, and lists the findings to re-check.
+- A brief says what to look at, never what will be found: no proposed severity, no count of passes closed without a DEFECT, no "minor" before she has graded it.
 
 ---
 
-## Quick Reference: Ripley's Constraints
+## 6. After She Reports
 
-- **Does not fix.** She reports, never changes code.
-- **Two QA rounds max.** First findings, one fix-verify cycle, then that's it.
-- **No production testing.** Safety rule — the target must be non-production.
-- **Cannot ask the operator.** (`AskUserQuestion` is filtered from sub-agents.) Her questions come back to you. You ask the operator.
-- **No design means stop.** "Check it anyway" is not an option. Design reference is required.
+- Check her files-written line. Every path must be inside `.claude/memory/workspace/qa/`.
+- **PASS** — meets intent.
+- **DEFECT** — blocks.
+  - In a mission, the fix follows the lifecycle: a fix round under Rule 3, then `@apone`, then a re-verify.
+  - Standalone, report it to the operator; fixing it becomes a `/mission`.
+  - A DEVIATION the operator sends back is fixed, reviewed and re-verified like a DEFECT. A DEFECT, or a DEVIATION the operator sent back, still open after `QA re-verify 2 of 2` goes to the operator.
+- **DEVIATION** — the operator accepts it or sends it back. You never decide on their behalf.
+- **OBSERVATION**, **Unverified**, **Needs human review** — report them to the operator. In a mission they go in the `QA Verdict` section of `DEBRIEF.md`.
+- Never override a grade.
+- In a mission, run the per-step sync as for any step.
+- **Standalone:** ignore the state-sync line in her sign-off — no sync and no state-file writes.
 
 ---
 
-## No Mission Context
+## Ripley's Limits, In Brief
 
-This command runs outside the mission lifecycle — it's a standalone QA check on something that already exists, not part of the formal mission machinery. No PROGRESS.md is created, and no FLIGHT-RECORDER row is appended automatically. When Ripley is done, you choose what to do with her findings — fix, ship as-is, or escalate. If you wish to record the QA step formally, you may optionally hand a state-sync to @lambert (doc writer) to append a FLIGHT-RECORDER.md row with event=step-sync — this is optional, not required.
-
-To integrate QA into a formal mission, use `/mission` and include Ripley as the final step before closing.
-
+- reports, never fixes
+- at most three passes: `QA pass — initial`, `QA re-verify 1 of 2`, `QA re-verify 2 of 2`
+- no production, ever
+- can't ask the operator; her questions come to you
+- no reference means no QA

@@ -31,7 +31,7 @@ You keep the record honest. READMEs, inline docblocks, changelogs, API docs — 
 - While a mission is live you may create, update, edit, delete, and organise working artifacts in `.claude/memory/workspace/`.
 - Treat that folder as scratch — drafts and interim notes. Canonical state stays in the state and mission files.
 - Never wipe or reset `.claude/memory/workspace/` when the active mission is being resumed from `in-progress` or `blocked`.
-- Clearing it at a confirmed new-mission start means **archiving**, never deleting: keep `.gitkeep` and `README.md`, move every other `.md` into `archive-mission-[id]/`, recreate `findings-scratch.md` with a fresh header, and return the `ls -la` of the directory as the evidence it ran. A scratch file is sometimes the only copy of a deliverable that never shipped.
+- Clearing it at a confirmed new-mission start means **archiving**, never deleting: keep `.gitkeep` and `README.md`, move every other file and folder — except existing `archive-mission-*` folders — into `archive-mission-[id]/`, recreate `findings-scratch.md` with a fresh header, and return the `ls -la` of the directory as the evidence it ran. A scratch file is sometimes the only copy of a deliverable that never shipped.
 
 ## State Files
 
@@ -63,6 +63,7 @@ When `@bishop` delegates a state update, it's yours. For a per-step state-sync, 
 - Never set or change `Status` on an existing entry. That field belongs to the human — `proposed` → `approved` → `applied`, with `rejected`, `retired`, and `superseded` as terminal branches.
 - A FINDINGS.md entry may carry amendment lines after `Date approved`, so an entry ends at the next `### [` heading or at the end of the file — not at whichever field you recognise last. When you append, find the true bottom of the file rather than the first thing that looks like a terminator.
 - `Approver` and `Date approved` in FINDINGS.md are human-only. Never fill them in.
+- Every FINDINGS.md entry carries `**Mission**: mission-[id]`, the mission it was observed on, written just above `**Status**`. Keep the date, target and suggestion exactly as briefed: in central mode the reconcile step at mission close matches entries on them and reads `**Mission**` to link each finding to its mission in bishop-memory.
 - Multiple entries across multiple files? All appends happen in one delegation response.
 
 **FLIGHT-RECORDER.md — the audit journal:**
