@@ -10,12 +10,15 @@
 #   .git/info/exclude. The harness itself is never committed anywhere.
 #
 # RUNNING IT
-#   ./install-harness.sh [--dry-run] [--force] <target-repo-path>
+#   ./install-harness.sh [--dry-run] [--force] [--update] <target-repo-path>
 #
 # FLAGS
 #   --dry-run    Show every action it would take, change nothing.
 #   --force      Allow an existing settings.local.json to be overwritten.
 #                Without it, an existing file is left alone with a warning.
+#   --update     Refresh an already-installed harness (skip memory, settings,
+#                and git exclude). Requires target to already have .claude/.
+#                Update mode copies regular files only; symlinks are not handled.
 #   -h, --help   Print this and stop.
 #
 # STEP BY STEP
@@ -27,11 +30,13 @@
 #            lib/, connect-bishop-memory.sh, bishop-memory.conf.example
 #       OUT: memory/, about/, settings.local.json, .deployignore, .git/,
 #            README.md, install-harness.sh
-#   • Re-running refreshes the portable layer and leaves local state alone.
-#   • Seeds TARGET/.claude/memory/ from memory.zip, keeping anything already there.
-#   • Writes TARGET/.claude/settings.local.json, honouring --force.
-#   • Marks TARGET/.claude/hooks/ scripts executable.
-#   • Appends /.claude/ and /CLAUDE.md to .git/info/exclude if they aren't there.
+#   • In install mode: Seeds TARGET/.claude/memory/ from memory.zip, keeping
+#     anything already there. Writes TARGET/.claude/settings.local.json,
+#     honouring --force. Marks hooks executable. Appends /.claude/ and /CLAUDE.md
+#     to .git/info/exclude.
+#   • In --update mode: refreshes portable files only, makes hooks executable,
+#     and leaves memory/, settings.local.json, qa.conf, bishop-memory.conf,
+#     and about/ untouched.
 #   • Warns when TARGET isn't a git repo, since the untrack step needs .git/.
 #   • Safe to run again: memory survives, exclude lines don't duplicate, and
 #     settings.local.json isn't clobbered without --force.
@@ -56,17 +61,21 @@ print_usage() {
 install-harness.sh — puts the Bishop harness into another repo
 
 USAGE
-  ./install-harness.sh [--dry-run] [--force] <target-repo-path>
+  ./install-harness.sh [--dry-run] [--force] [--update] <target-repo-path>
 
 OPTIONS
   --dry-run    Show what would happen, change nothing.
   --force      Overwrite existing settings.local.json (default: skip + warn).
+  --update     Refresh an already-installed harness (skip memory, settings,
+               exclude). Requires target to have .claude/ already.
   -h, --help   Print this message and exit.
 
-EXAMPLE
+EXAMPLES
   ./install-harness.sh ~/my-project
   ./install-harness.sh --dry-run ~/my-project
   ./install-harness.sh --force ~/my-project
+  ./install-harness.sh --update ~/my-project
+  ./install-harness.sh --dry-run --update ~/my-project
 EOF
 }
 
@@ -97,6 +106,29 @@ log_error() {
 #
 log_dry_run() {
   echo "[DRY-RUN] $*"
+}
+
+#
+# get_portable_files — output the list of portable files/directories (relative to .claude/).
+#   Each entry is a single line. Used to define what rsync includes and what the update
+#   mode processes.
+#
+get_portable_files() {
+  cat <<'EOF'
+SOUL.md
+CREW-MANIFEST.md
+agents
+commands
+skills
+templates
+hooks
+settings.json
+memory.zip
+qa.conf.example
+lib
+connect-bishop-memory.sh
+bishop-memory.conf.example
+EOF
 }
 
 #
@@ -133,6 +165,25 @@ is_git_repo() {
 }
 
 #
+# is_installed — 0 when TARGET looks like it already has the harness installed
+#   (checks for .claude/ and either SOUL.md or agents/), 1 when it doesn't.
+#
+is_installed() {
+  local target="$1"
+
+  if [[ ! -d "$target/.claude" ]]; then
+    return 1
+  fi
+
+  # Check for either SOUL.md or agents/ as markers of installation
+  if [[ -f "$target/.claude/SOUL.md" ]] || [[ -d "$target/.claude/agents" ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
+#
 # copy_portable_layer — move CLAUDE.md and the portable parts of .claude/ across,
 #   preferring rsync and falling back to cp. Honours DRY_RUN.
 #   Sets PORTABLE_LAYER_STATUS.
@@ -160,29 +211,20 @@ copy_portable_layer() {
     local rsync_cmd=(
       "rsync"
       "-a"
-      "--include=SOUL.md"
-      "--include=CREW-MANIFEST.md"
-      "--include=agents/"
-      "--include=agents/**"
-      "--include=commands/"
-      "--include=commands/**"
-      "--include=skills/"
-      "--include=skills/**"
-      "--include=templates/"
-      "--include=templates/**"
-      "--include=hooks/"
-      "--include=hooks/**"
-      "--include=settings.json"
-      "--include=memory.zip"
-      "--include=qa.conf.example"
-      "--include=lib/"
-      "--include=lib/**"
-      "--include=connect-bishop-memory.sh"
-      "--include=bishop-memory.conf.example"
-      "--exclude=*"
-      "$source/.claude/"
-      "$target/.claude/"
     )
+
+    # Add includes dynamically from get_portable_files
+    while IFS= read -r item; do
+      [[ -z "$item" ]] && continue
+      if [[ -d "$source/.claude/$item" ]]; then
+        rsync_cmd+=("--include=$item/")
+        rsync_cmd+=("--include=$item/**")
+      else
+        rsync_cmd+=("--include=$item")
+      fi
+    done < <(get_portable_files)
+
+    rsync_cmd+=("--exclude=*" "$source/.claude/" "$target/.claude/")
 
     if [[ "$DRY_RUN" == "1" ]]; then
       log_dry_run "${rsync_cmd[*]}"
@@ -192,39 +234,25 @@ copy_portable_layer() {
       PORTABLE_LAYER_STATUS="copied"
     fi
   else
-    # Fallback: cp -r for individual items (ensuring no double-nesting on directories)
-    local items=(
-      "SOUL.md"
-      "CREW-MANIFEST.md"
-      "agents"
-      "commands"
-      "skills"
-      "templates"
-      "hooks"
-      "settings.json"
-      "memory.zip"
-      "qa.conf.example"
-      "lib"
-      "connect-bishop-memory.sh"
-      "bishop-memory.conf.example"
-    )
+    # Fallback: cp -p for individual items (ensuring no double-nesting on directories)
+    while IFS= read -r item; do
+      [[ -z "$item" ]] && continue
 
-    for item in "${items[@]}"; do
       if [[ "$DRY_RUN" == "1" ]]; then
         if [[ -d "$source/.claude/$item" ]]; then
           log_dry_run "cp -r '$source/.claude/$item' '$target/.claude/$item' (contents)"
         else
-          log_dry_run "cp '$source/.claude/$item' '$target/.claude/$item'"
+          log_dry_run "cp -p '$source/.claude/$item' '$target/.claude/$item'"
         fi
       else
         if [[ -d "$source/.claude/$item" ]]; then
           mkdir -p "$target/.claude/$item"
-          cp -R "$source/.claude/$item/." "$target/.claude/$item"
+          cp -Rp "$source/.claude/$item/." "$target/.claude/$item"
         else
-          cp "$source/.claude/$item" "$target/.claude/$item"
+          cp -p "$source/.claude/$item" "$target/.claude/$item"
         fi
       fi
-    done
+    done < <(get_portable_files)
 
     if [[ "$DRY_RUN" == "1" ]]; then
       PORTABLE_LAYER_STATUS="dry-run"
@@ -258,6 +286,164 @@ seed_memory() {
     fi
     MEMORY_STATUS="seeded"
   fi
+}
+
+#
+# update_portable_layer — in --update mode, refresh the portable files by walking
+#   the source portable set and comparing to target. Reports changes to screen.
+#   Copies NEW and CHANGED files, leaves SAME untouched, reports TARGET-ONLY but
+#   does not delete. Preserves file modes on copy. Honours DRY_RUN.
+#   Sets globals UPDATE_CHANGED, UPDATE_NEW, UPDATE_SAME, UPDATE_TARGET_ONLY,
+#   UPDATE_IS_DRY_RUN, and UPDATE_LAYER_STATUS.
+#
+update_portable_layer() {
+  local source="$1"
+  local target="$2"
+
+  UPDATE_CHANGED=0
+  UPDATE_NEW=0
+  UPDATE_SAME=0
+  UPDATE_TARGET_ONLY=0
+
+  # Ensure .claude exists in target
+  if [[ ! -d "$target/.claude" ]]; then
+    log_error "Target .claude directory not found (use normal install mode)"
+  fi
+
+  # Walk source portable files and compare/copy
+  while IFS= read -r item; do
+    [[ -z "$item" ]] && continue
+
+    local src_path="$source/.claude/$item"
+    local target_path="$target/.claude/$item"
+
+    # W3: log_warn if source item missing
+    if [[ ! -e "$src_path" ]]; then
+      log_warn "missing in source: $item"
+      continue
+    fi
+
+    if [[ -d "$src_path" ]]; then
+      # It's a directory in source — walk its regular files (S3: sorted)
+      while IFS= read -r -d '' src_file; do
+        # S1: Skip only .DS_Store, not all dotfiles
+        if [[ "$(basename "$src_file")" == ".DS_Store" ]]; then
+          continue
+        fi
+
+        local rel_path="${src_file#"$source/.claude/"}"
+        local tgt_file="$target/.claude/$rel_path"
+
+        if [[ ! -f "$tgt_file" ]]; then
+          # NEW file
+          UPDATE_NEW=$((UPDATE_NEW + 1))
+          if [[ "$DRY_RUN" == "1" ]]; then
+            log_dry_run "would copy  NEW  .claude/$rel_path"
+          else
+            echo "[*] NEW           .claude/$rel_path"
+            mkdir -p "$(dirname "$tgt_file")"
+            cp -p "$src_file" "$tgt_file"
+          fi
+        elif ! cmp -s "$src_file" "$tgt_file"; then
+          # CHANGED file
+          UPDATE_CHANGED=$((UPDATE_CHANGED + 1))
+          if [[ "$DRY_RUN" == "1" ]]; then
+            log_dry_run "would copy  CHANGED  .claude/$rel_path"
+          else
+            echo "[*] CHANGED       .claude/$rel_path"
+            cp -p "$src_file" "$tgt_file"
+          fi
+        else
+          # SAME file
+          UPDATE_SAME=$((UPDATE_SAME + 1))
+        fi
+      done < <(find "$src_path" -type f -print0 | sort -z)
+    else
+      # It's a file in source
+      local rel_path="$item"
+      if [[ ! -f "$target_path" ]]; then
+        # NEW file
+        UPDATE_NEW=$((UPDATE_NEW + 1))
+        if [[ "$DRY_RUN" == "1" ]]; then
+          log_dry_run "would copy  NEW  .claude/$rel_path"
+        else
+          echo "[*] NEW           .claude/$rel_path"
+          mkdir -p "$(dirname "$target_path")"
+          cp -p "$src_path" "$target_path"
+        fi
+      elif ! cmp -s "$src_path" "$target_path"; then
+        # CHANGED file
+        UPDATE_CHANGED=$((UPDATE_CHANGED + 1))
+        if [[ "$DRY_RUN" == "1" ]]; then
+          log_dry_run "would copy  CHANGED  .claude/$rel_path"
+        else
+          echo "[*] CHANGED       .claude/$rel_path"
+          cp -p "$src_path" "$target_path"
+        fi
+      else
+        # SAME file
+        UPDATE_SAME=$((UPDATE_SAME + 1))
+      fi
+    fi
+  done < <(get_portable_files)
+
+  # Now check for TARGET-ONLY files: files in target portable directories that aren't in source
+  # W4: Iterate get_portable_files (directories only), not a hardcoded list
+  while IFS= read -r item; do
+    [[ -z "$item" ]] && continue
+    local target_dir="$target/.claude/$item"
+
+    if [[ -d "$target_dir" ]]; then
+      # Walk files in target directory (S3: sorted)
+      while IFS= read -r -d '' tgt_file; do
+        # S1: Skip only .DS_Store, not all dotfiles
+        if [[ "$(basename "$tgt_file")" == ".DS_Store" ]]; then
+          continue
+        fi
+
+        local rel_path="${tgt_file#"$target/.claude/"}"
+        local src_file="$source/.claude/$rel_path"
+
+        if [[ ! -f "$src_file" ]]; then
+          # TARGET-ONLY file
+          UPDATE_TARGET_ONLY=$((UPDATE_TARGET_ONLY + 1))
+          if [[ "$DRY_RUN" == "1" ]]; then
+            log_dry_run "would keep  TARGET-ONLY  .claude/$rel_path"
+          else
+            echo "[*] TARGET-ONLY   .claude/$rel_path"
+          fi
+        fi
+      done < <(find "$target_dir" -type f -print0 | sort -z)
+    fi
+  done < <(get_portable_files | grep -E '^(agents|commands|skills|templates|hooks|lib)$')
+
+  # Also check CLAUDE.md at target root
+  if [[ -f "$target/CLAUDE.md" ]]; then
+    if ! cmp -s "$source/CLAUDE.md" "$target/CLAUDE.md"; then
+      UPDATE_CHANGED=$((UPDATE_CHANGED + 1))
+      if [[ "$DRY_RUN" == "1" ]]; then
+        log_dry_run "would copy  CHANGED  CLAUDE.md"
+      else
+        echo "[*] CHANGED       CLAUDE.md"
+        cp -p "$source/CLAUDE.md" "$target/CLAUDE.md"
+      fi
+    else
+      UPDATE_SAME=$((UPDATE_SAME + 1))
+    fi
+  else
+    UPDATE_NEW=$((UPDATE_NEW + 1))
+    if [[ "$DRY_RUN" == "1" ]]; then
+      log_dry_run "would copy  NEW  CLAUDE.md"
+    else
+      echo "[*] NEW           CLAUDE.md"
+      cp -p "$source/CLAUDE.md" "$target/CLAUDE.md"
+    fi
+  fi
+
+  # Store dry-run flag for later reporting
+  UPDATE_IS_DRY_RUN="$DRY_RUN"
+
+  UPDATE_LAYER_STATUS="completed"
 }
 
 #
@@ -448,119 +634,175 @@ untrack_harness() {
 
 #
 # print_final_report — a short checklist of what actually happened, read back
-#   from the status variables each step sets.
+#   from the status variables each step sets. Handles both install and update modes.
 #
 print_final_report() {
   local target="$1"
   local dry_run="$2"
+  local update_mode="${3:-0}"
 
   echo ""
   echo "═══════════════════════════════════════════════════════════════"
-  echo "BISHOP HARNESS INSTALLATION REPORT"
-  echo "═══════════════════════════════════════════════════════════════"
-  echo ""
 
-  if [[ "$dry_run" == "1" ]]; then
-    echo "MODE: Dry-run (no changes made)"
-    echo ""
+  if [[ "$update_mode" == "1" ]]; then
+    echo "BISHOP HARNESS UPDATE REPORT"
+  else
+    echo "BISHOP HARNESS INSTALLATION REPORT"
   fi
 
-  echo "INSTALLATION STEPS"
+  echo "═══════════════════════════════════════════════════════════════"
+  echo ""
 
-  # Portable layer status
-  case "$PORTABLE_LAYER_STATUS" in
-    "copied")
-      echo "  ✓ Portable layer copied (CLAUDE.md, agents/, skills/, etc.)"
-      ;;
-    "dry-run")
-      echo "  [DRY-RUN] Portable layer would be copied"
-      ;;
-    *)
-      echo "  ⚠ Portable layer status unknown"
-      ;;
-  esac
+  if [[ "$update_mode" == "1" ]]; then
+    # Update mode: report from globals
+    if [[ "$UPDATE_IS_DRY_RUN" == "1" ]]; then
+      echo "MODE: Dry-run (no changes made)"
+      echo ""
+    fi
 
-  # Memory status
-  case "$MEMORY_STATUS" in
-    "seeded")
-      echo "  ✓ Memory seeded from memory.zip"
-      ;;
-    "preserved")
-      echo "  ✓ Memory preserved (existing state kept)"
-      ;;
-    "dry-run")
-      echo "  [DRY-RUN] Memory would be seeded from memory.zip"
-      ;;
-    *)
-      echo "  ⚠ Memory status unknown"
-      ;;
-  esac
+    if [[ $UPDATE_CHANGED -eq 0 && $UPDATE_NEW -eq 0 && $UPDATE_TARGET_ONLY -eq 0 ]]; then
+      if [[ $UPDATE_SAME -gt 0 ]]; then
+        echo "STATUS: Harness is already up to date with $UPDATE_SAME unchanged file(s)"
+      else
+        echo "STATUS: Harness is already up to date"
+      fi
+    else
+      echo "Update summary: $UPDATE_CHANGED changed, $UPDATE_NEW new, $UPDATE_SAME unchanged, $UPDATE_TARGET_ONLY target-only (not removed)"
+    fi
 
-  # Chmod hooks status
-  case "$CHMOD_HOOKS_STATUS" in
-    "applied")
-      echo "  ✓ Hooks made executable"
-      ;;
-    "dry-run")
-      echo "  [DRY-RUN] Hooks would be made executable"
-      ;;
-    "none-found")
-      echo "  ⓘ No hook scripts found (skipped)"
-      ;;
-    "skipped")
-      echo "  ⓘ Hooks directory not found (skipped)"
-      ;;
-    *)
-      echo "  ⚠ Chmod hooks status unknown"
-      ;;
-  esac
+    echo ""
+    echo "UPDATE STEPS"
+    if [[ "$UPDATE_IS_DRY_RUN" == "1" ]]; then
+      echo "  [DRY-RUN] Portable layer would be refreshed"
+    else
+      echo "  ✓ Portable layer refreshed"
+    fi
+    case "$CHMOD_HOOKS_STATUS" in
+      "applied")
+        echo "  ✓ Hooks made executable"
+        ;;
+      "dry-run")
+        echo "  [DRY-RUN] Hooks would be made executable"
+        ;;
+      "none-found")
+        echo "  ⓘ No hook scripts found (skipped)"
+        ;;
+      "skipped")
+        echo "  ⓘ Hooks directory not found (skipped)"
+        ;;
+      *)
+        echo "  ⓘ Hooks (status unknown)"
+        ;;
+    esac
+    echo "  ⓘ Memory, settings.local.json, and .git/info/exclude left untouched (update mode)"
+  else
+    # Install mode: original reporting
+    if [[ "$dry_run" == "1" ]]; then
+      echo "MODE: Dry-run (no changes made)"
+      echo ""
+    fi
 
-  # Settings.local.json status
-  case "$SETTINGS_JSON_STATUS" in
-    "written")
-      echo "  ✓ settings.local.json written"
-      ;;
-    "dry-run")
-      echo "  [DRY-RUN] settings.local.json would be written"
-      ;;
-    "dry-run-skip")
-      echo "  [DRY-RUN] settings.local.json exists — would skip"
-      ;;
-    "skipped")
-      echo "  ⓘ settings.local.json exists — skipped (use --force to overwrite)"
-      ;;
-    *)
-      echo "  ⚠ Settings.local.json status unknown"
-      ;;
-  esac
+    echo "INSTALLATION STEPS"
 
-  # Untrack status
-  case "$UNTRACK_STATUS" in
-    "updated")
-      echo "  ✓ Harness untracked via .git/info/exclude"
-      ;;
-    "dry-run")
-      echo "  [DRY-RUN] Harness would be untracked via .git/info/exclude"
-      ;;
-    "skipped-not-git")
-      echo "  ⚠ Not a git repository — cannot untrack (manual action required)"
-      ;;
-    *)
-      echo "  ⚠ Untrack status unknown"
-      ;;
-  esac
+    # Portable layer status
+    case "$PORTABLE_LAYER_STATUS" in
+      "copied")
+        echo "  ✓ Portable layer copied (CLAUDE.md, agents/, skills/, etc.)"
+        ;;
+      "dry-run")
+        echo "  [DRY-RUN] Portable layer would be copied"
+        ;;
+      *)
+        echo "  ⚠ Portable layer status unknown"
+        ;;
+    esac
+
+    # Memory status
+    case "$MEMORY_STATUS" in
+      "seeded")
+        echo "  ✓ Memory seeded from memory.zip"
+        ;;
+      "preserved")
+        echo "  ✓ Memory preserved (existing state kept)"
+        ;;
+      "dry-run")
+        echo "  [DRY-RUN] Memory would be seeded from memory.zip"
+        ;;
+      *)
+        echo "  ⚠ Memory status unknown"
+        ;;
+    esac
+
+    # Chmod hooks status
+    case "$CHMOD_HOOKS_STATUS" in
+      "applied")
+        echo "  ✓ Hooks made executable"
+        ;;
+      "dry-run")
+        echo "  [DRY-RUN] Hooks would be made executable"
+        ;;
+      "none-found")
+        echo "  ⓘ No hook scripts found (skipped)"
+        ;;
+      "skipped")
+        echo "  ⓘ Hooks directory not found (skipped)"
+        ;;
+      *)
+        echo "  ⚠ Chmod hooks status unknown"
+        ;;
+    esac
+
+    # Settings.local.json status
+    case "$SETTINGS_JSON_STATUS" in
+      "written")
+        echo "  ✓ settings.local.json written"
+        ;;
+      "dry-run")
+        echo "  [DRY-RUN] settings.local.json would be written"
+        ;;
+      "dry-run-skip")
+        echo "  [DRY-RUN] settings.local.json exists — would skip"
+        ;;
+      "skipped")
+        echo "  ⓘ settings.local.json exists — skipped (use --force to overwrite)"
+        ;;
+      *)
+        echo "  ⚠ Settings.local.json status unknown"
+        ;;
+    esac
+
+    # Untrack status
+    case "$UNTRACK_STATUS" in
+      "updated")
+        echo "  ✓ Harness untracked via .git/info/exclude"
+        ;;
+      "dry-run")
+        echo "  [DRY-RUN] Harness would be untracked via .git/info/exclude"
+        ;;
+      "skipped-not-git")
+        echo "  ⚠ Not a git repository — cannot untrack (manual action required)"
+        ;;
+      *)
+        echo "  ⚠ Untrack status unknown"
+        ;;
+    esac
+  fi
 
   echo ""
   echo "TARGET: $target"
   if [[ "$dry_run" != "1" ]]; then
     echo "STATUS: Ready for use"
   fi
-  echo ""
-  echo "NEXT STEPS"
-  echo "  1. (Optional) Run /about-setup in Claude Code to create operator profile"
-  echo "  2. Populate .claude/memory/reference/DIRECTIVES.md with project rules"
-  echo "  3. Open a Claude Code session in the target repository"
-  echo "  4. Confirm that hooks fire and /mission initializes state correctly"
+
+  if [[ "$update_mode" != "1" ]]; then
+    echo ""
+    echo "NEXT STEPS"
+    echo "  1. (Optional) Run /about-setup in Claude Code to create operator profile"
+    echo "  2. Populate .claude/memory/reference/DIRECTIVES.md with project rules"
+    echo "  3. Open a Claude Code session in the target repository"
+    echo "  4. Confirm that hooks fire and /mission initializes state correctly"
+  fi
+
   echo ""
   echo "═══════════════════════════════════════════════════════════════"
 }
@@ -571,12 +813,14 @@ print_final_report() {
 
 DRY_RUN=0
 FORCE=0
+UPDATE_MODE=0
 TARGET=""
 PORTABLE_LAYER_STATUS=""
 MEMORY_STATUS=""
 CHMOD_HOOKS_STATUS=""
 SETTINGS_JSON_STATUS=""
 UNTRACK_STATUS=""
+UPDATE_LAYER_STATUS=""
 
 # Read the flags
 while [[ $# -gt 0 ]]; do
@@ -587,6 +831,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --force)
       FORCE=1
+      shift
+      ;;
+    --update)
+      UPDATE_MODE=1
       shift
       ;;
     -h|--help)
@@ -620,23 +868,49 @@ validate_target "$TARGET"
 # Make TARGET absolute
 TARGET="$(cd "$TARGET" && pwd -P)"
 
+# In update mode, check that the target is already installed
+if [[ "$UPDATE_MODE" == "1" ]]; then
+  if ! is_installed "$TARGET"; then
+    log_error "Target does not appear to have the harness installed. Use normal install mode: ./install-harness.sh $TARGET"
+  fi
+fi
+
 log_info "SOURCE: $SOURCE"
 log_info "TARGET: $TARGET"
 
-if [[ "$DRY_RUN" == "1" ]]; then
+if [[ "$UPDATE_MODE" == "1" ]]; then
+  log_info "UPDATE mode enabled (refreshing portable files only)"
+  if [[ "$FORCE" == "1" ]]; then
+    log_info "(--force flag ignored in update mode)"
+  fi
+elif [[ "$DRY_RUN" == "1" ]]; then
   log_info "DRY-RUN mode enabled (no changes will be made)"
 fi
 
 echo ""
 
+# Initialize update report globals (S2: use globals instead of temp file)
+UPDATE_CHANGED=0
+UPDATE_NEW=0
+UPDATE_SAME=0
+UPDATE_TARGET_ONLY=0
+UPDATE_IS_DRY_RUN=0
+
 # Do the work
-copy_portable_layer "$SOURCE" "$TARGET"
-seed_memory "$TARGET"
-chmod_hooks "$TARGET" "$SOURCE"
-write_settings_local_json "$TARGET" "$FORCE"
-untrack_harness "$TARGET"
+if [[ "$UPDATE_MODE" == "1" ]]; then
+  # Update mode: only refresh portable files and make hooks executable
+  update_portable_layer "$SOURCE" "$TARGET"
+  chmod_hooks "$TARGET" "$SOURCE"
+else
+  # Install mode: full installation
+  copy_portable_layer "$SOURCE" "$TARGET"
+  seed_memory "$TARGET"
+  chmod_hooks "$TARGET" "$SOURCE"
+  write_settings_local_json "$TARGET" "$FORCE"
+  untrack_harness "$TARGET"
+fi
 
 # Say what happened
-print_final_report "$TARGET" "$DRY_RUN"
+print_final_report "$TARGET" "$DRY_RUN" "$UPDATE_MODE"
 
 exit 0
