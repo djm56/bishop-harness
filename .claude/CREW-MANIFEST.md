@@ -66,7 +66,7 @@ These decide who gets coding work while the plan is being written:
 - Structure it however the work needs.
 - It's scratch, not record — no substitute for the canonical state files in `.claude/memory/state/` or the mission files in `.claude/memory/missions/`.
 - For unfinished missions it survives across sessions, carrying resumable context until the mission closes or is deliberately replaced.
-- It gets cleared only on confirmed new-mission initialization, and clearing means **archiving**: `.gitkeep` and `README.md` stay, everything else — except existing `archive-mission-*` folders — moves into `archive-mission-[id]/`, and `findings-scratch.md` is recreated fresh. Nothing here is deleted.
+- It gets cleared only on confirmed new-mission initialization, and clearing means **archiving**: `.gitkeep` and `README.md` stay, everything else — except `findings-scratch.md` and existing `archive-mission-*` folders — moves into `archive-mission-[id]/`. `findings-scratch.md` is copied into the archive and reset in place (see mission-lifecycle). Nothing here is deleted.
 - `findings-scratch.md` lives here — the running collection of IMPROVEMENT-NOTE findings that the closing learning pass consolidates. Bishop never writes it: each non-`none` note is appended by `@lambert` as part of the same state-sync delegation for that step, never by Bishop's own hand and never as a separate delegation.
 
 ## Where Memory Lives

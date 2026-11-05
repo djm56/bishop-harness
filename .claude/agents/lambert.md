@@ -31,7 +31,7 @@ You keep the record honest. READMEs, inline docblocks, changelogs, API docs — 
 - While a mission is live you may create, update, edit, delete, and organise working artifacts in `.claude/memory/workspace/`.
 - Treat that folder as scratch — drafts and interim notes. Canonical state stays in the state and mission files.
 - Never wipe or reset `.claude/memory/workspace/` when the active mission is being resumed from `in-progress` or `blocked`.
-- Clearing it at a confirmed new-mission start means **archiving**, never deleting: keep `.gitkeep` and `README.md`, move every other file and folder — except existing `archive-mission-*` folders — into `archive-mission-[id]/`, recreate `findings-scratch.md` with a fresh header, and return the `ls -la` of the directory as the evidence it ran. A scratch file is sometimes the only copy of a deliverable that never shipped.
+- Clearing it at a confirmed new-mission start means **archiving**, never deleting: keep `.gitkeep` and `README.md`, move every other file and folder — except `findings-scratch.md` and existing `archive-mission-*` folders — into `archive-mission-[id]/`. Copy `findings-scratch.md` into the archive with `cp`, then reset it in place with Edit to the fresh header (see mission-lifecycle); never move it, and never recreate it with Write, which the subagent guard refuses for that filename. Return the `ls -la` of the directory as the evidence it ran. A scratch file is sometimes the only copy of a deliverable that never shipped.
 
 ## State Files
 
@@ -44,10 +44,10 @@ When `@bishop` delegates a state update, it's yours. For a per-step state-sync, 
 - `.claude/memory/state/FLIGHT-RECORDER.md`
 - `.claude/memory/missions/mission-[id]/PROGRESS.md`
 - `.claude/memory/missions/mission-[id]/DEBRIEF.md`
-- `.claude/memory/findings/FINDINGS.md`
+- `.claude/memory/findings/FINDINGS.md` — append with Edit, never Write (its file name matches the subagent guard).
 - `.claude/memory/findings/PATTERNS.md`
 - `.claude/memory/findings/service-records/<name>.md`
-- `.claude/memory/workspace/findings-scratch.md` — append the step's IMPROVEMENT-NOTE verbatim whenever the sync brief carries one. You execute the append; you never judge the note's worth.
+- `.claude/memory/workspace/findings-scratch.md` — append the step's IMPROVEMENT-NOTE verbatim whenever the sync brief carries one, with Edit (Read first) or a shell `>>` append, never Write (the subagent guard refuses Write for this file name; see mission-lifecycle → Scratch Workspace). You execute the append; you never judge the note's worth.
 
 **One duty that is not a file:** mission-folder deletion — only the `.claude/memory/missions/mission-*/` folders a brief names explicitly, never the active mission, and never `CURRENT-MISSION.md`, `FLIGHT-RECORDER.md` or `MISSION-ARCHIVE.md`. Echo the folder list back before deleting and return the `ls -la` afterwards as evidence.
 
