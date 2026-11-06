@@ -51,7 +51,7 @@ Everything lands under `.claude/memory/findings/`, sorted by what kind of insigh
 | How a particular agent is performing | `.claude/memory/findings/service-records/<agent-name>.md` |
 | Scratch collection while the mission is still running | `.claude/memory/workspace/findings-scratch.md` |
 
-Nothing here is written from memory at the end. Non-`none` IMPROVEMENT-NOTE footers get appended to `findings-scratch.md` as the steps land, and the closing pass consolidates that list. The scratch file is archived at the next new-mission init like anything else in `workspace/`.
+Nothing here is written from memory at the end. Non-`none` IMPROVEMENT-NOTE footers get appended to `findings-scratch.md` as the steps land, and the closing pass consolidates that list. At the next new-mission init the scratch file is copied into the archive and reset in place, per the Workspace rule in `.claude/skills/mission-lifecycle/SKILL.md`.
 
 **Format authority**: `.claude/templates/findings/FINDINGS-TEMPLATE.md` governs all three. Every file is append-only, and every one of them carries `<!-- Append new entries below this line -->` under its header — new entries go below that marker and below every existing entry, at the very bottom of the file. The marker never moves and nothing already written is displaced.
 
